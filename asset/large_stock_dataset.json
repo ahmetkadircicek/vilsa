@@ -1,0 +1,996 @@
+{
+    "stock": {
+        "-OLU5YJ_SkYQFUdony2s": {
+            "abbreviation": "ASELS",
+            "dividends": 120.5,
+            "id": "a19adc81-1330-4f87-88a9-8d9f21989c9f",
+            "name": "Aselsan"
+        },
+        "-OLU8nkzx5sFRrC7vyJn": {
+            "abbreviation": "THYAO",
+            "dividends": 85.3,
+            "id": "0e800ce8-13c3-44f3-9831-2ba3a0da6376",
+            "name": "Turk Hava Yollari"
+        },
+        "-OLU9abcD34Xyz789Fgh": {
+            "abbreviation": "GARAN",
+            "dividends": 60.2,
+            "id": "1a2b3c4d-5678-90ef-1234-56789abcdef0",
+            "name": "Garanti Bankasi"
+        },
+        "-OLUDEF456XYZ987PQR": {
+            "abbreviation": "BIMAS",
+            "dividends": 90.7,
+            "id": "2c3d4e5f-6789-01ab-23cd-45ef6789gh01",
+            "name": "Bim Birlesik Magazalar"
+        },
+        "-OLUHGF321XYP789MNO": {
+            "abbreviation": "SASA",
+            "dividends": 150.3,
+            "id": "3f4g5h6i-7890-12bc-34de-56fg7890hi23",
+            "name": "Sasa Polyester"
+        }
+    },
+    "transactions": {
+        "-TXN0000": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0000",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 50,
+            "quantity": 1,
+            "stock": {
+                "abbreviation": "ASELS",
+                "dividends": 120.5,
+                "id": "a19adc81-1330-4f87-88a9-8d9f21989c9f",
+                "name": "Aselsan"
+            }
+        },
+        "-TXN0001": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0001",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 70,
+            "quantity": 2,
+            "stock": {
+                "abbreviation": "THYAO",
+                "dividends": 85.3,
+                "id": "0e800ce8-13c3-44f3-9831-2ba3a0da6376",
+                "name": "Turk Hava Yollari"
+            }
+        },
+        "-TXN0002": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0002",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 90,
+            "quantity": 3,
+            "stock": {
+                "abbreviation": "GARAN",
+                "dividends": 60.2,
+                "id": "1a2b3c4d-5678-90ef-1234-56789abcdef0",
+                "name": "Garanti Bankasi"
+            }
+        },
+        "-TXN0003": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0003",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 110,
+            "quantity": 4,
+            "stock": {
+                "abbreviation": "BIMAS",
+                "dividends": 90.7,
+                "id": "2c3d4e5f-6789-01ab-23cd-45ef6789gh01",
+                "name": "Bim Birlesik Magazalar"
+            }
+        },
+        "-TXN0004": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0004",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 130,
+            "quantity": 5,
+            "stock": {
+                "abbreviation": "SASA",
+                "dividends": 150.3,
+                "id": "3f4g5h6i-7890-12bc-34de-56fg7890hi23",
+                "name": "Sasa Polyester"
+            }
+        },
+        "-TXN0005": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0005",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 50,
+            "quantity": 6,
+            "stock": {
+                "abbreviation": "ASELS",
+                "dividends": 120.5,
+                "id": "a19adc81-1330-4f87-88a9-8d9f21989c9f",
+                "name": "Aselsan"
+            }
+        },
+        "-TXN0006": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0006",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 70,
+            "quantity": 7,
+            "stock": {
+                "abbreviation": "THYAO",
+                "dividends": 85.3,
+                "id": "0e800ce8-13c3-44f3-9831-2ba3a0da6376",
+                "name": "Turk Hava Yollari"
+            }
+        },
+        "-TXN0007": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0007",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 90,
+            "quantity": 8,
+            "stock": {
+                "abbreviation": "GARAN",
+                "dividends": 60.2,
+                "id": "1a2b3c4d-5678-90ef-1234-56789abcdef0",
+                "name": "Garanti Bankasi"
+            }
+        },
+        "-TXN0008": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0008",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 110,
+            "quantity": 9,
+            "stock": {
+                "abbreviation": "BIMAS",
+                "dividends": 90.7,
+                "id": "2c3d4e5f-6789-01ab-23cd-45ef6789gh01",
+                "name": "Bim Birlesik Magazalar"
+            }
+        },
+        "-TXN0009": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0009",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 130,
+            "quantity": 10,
+            "stock": {
+                "abbreviation": "SASA",
+                "dividends": 150.3,
+                "id": "3f4g5h6i-7890-12bc-34de-56fg7890hi23",
+                "name": "Sasa Polyester"
+            }
+        },
+        "-TXN0010": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0010",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 50,
+            "quantity": 1,
+            "stock": {
+                "abbreviation": "ASELS",
+                "dividends": 120.5,
+                "id": "a19adc81-1330-4f87-88a9-8d9f21989c9f",
+                "name": "Aselsan"
+            }
+        },
+        "-TXN0011": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0011",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 70,
+            "quantity": 2,
+            "stock": {
+                "abbreviation": "THYAO",
+                "dividends": 85.3,
+                "id": "0e800ce8-13c3-44f3-9831-2ba3a0da6376",
+                "name": "Turk Hava Yollari"
+            }
+        },
+        "-TXN0012": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0012",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 90,
+            "quantity": 3,
+            "stock": {
+                "abbreviation": "GARAN",
+                "dividends": 60.2,
+                "id": "1a2b3c4d-5678-90ef-1234-56789abcdef0",
+                "name": "Garanti Bankasi"
+            }
+        },
+        "-TXN0013": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0013",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 110,
+            "quantity": 4,
+            "stock": {
+                "abbreviation": "BIMAS",
+                "dividends": 90.7,
+                "id": "2c3d4e5f-6789-01ab-23cd-45ef6789gh01",
+                "name": "Bim Birlesik Magazalar"
+            }
+        },
+        "-TXN0014": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0014",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 130,
+            "quantity": 5,
+            "stock": {
+                "abbreviation": "SASA",
+                "dividends": 150.3,
+                "id": "3f4g5h6i-7890-12bc-34de-56fg7890hi23",
+                "name": "Sasa Polyester"
+            }
+        },
+        "-TXN0015": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0015",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 50,
+            "quantity": 6,
+            "stock": {
+                "abbreviation": "ASELS",
+                "dividends": 120.5,
+                "id": "a19adc81-1330-4f87-88a9-8d9f21989c9f",
+                "name": "Aselsan"
+            }
+        },
+        "-TXN0016": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0016",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 70,
+            "quantity": 7,
+            "stock": {
+                "abbreviation": "THYAO",
+                "dividends": 85.3,
+                "id": "0e800ce8-13c3-44f3-9831-2ba3a0da6376",
+                "name": "Turk Hava Yollari"
+            }
+        },
+        "-TXN0017": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0017",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 90,
+            "quantity": 8,
+            "stock": {
+                "abbreviation": "GARAN",
+                "dividends": 60.2,
+                "id": "1a2b3c4d-5678-90ef-1234-56789abcdef0",
+                "name": "Garanti Bankasi"
+            }
+        },
+        "-TXN0018": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0018",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 110,
+            "quantity": 9,
+            "stock": {
+                "abbreviation": "BIMAS",
+                "dividends": 90.7,
+                "id": "2c3d4e5f-6789-01ab-23cd-45ef6789gh01",
+                "name": "Bim Birlesik Magazalar"
+            }
+        },
+        "-TXN0019": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0019",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 130,
+            "quantity": 10,
+            "stock": {
+                "abbreviation": "SASA",
+                "dividends": 150.3,
+                "id": "3f4g5h6i-7890-12bc-34de-56fg7890hi23",
+                "name": "Sasa Polyester"
+            }
+        },
+        "-TXN0020": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0020",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 50,
+            "quantity": 1,
+            "stock": {
+                "abbreviation": "ASELS",
+                "dividends": 120.5,
+                "id": "a19adc81-1330-4f87-88a9-8d9f21989c9f",
+                "name": "Aselsan"
+            }
+        },
+        "-TXN0021": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0021",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 70,
+            "quantity": 2,
+            "stock": {
+                "abbreviation": "THYAO",
+                "dividends": 85.3,
+                "id": "0e800ce8-13c3-44f3-9831-2ba3a0da6376",
+                "name": "Turk Hava Yollari"
+            }
+        },
+        "-TXN0022": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0022",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 90,
+            "quantity": 3,
+            "stock": {
+                "abbreviation": "GARAN",
+                "dividends": 60.2,
+                "id": "1a2b3c4d-5678-90ef-1234-56789abcdef0",
+                "name": "Garanti Bankasi"
+            }
+        },
+        "-TXN0023": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0023",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 110,
+            "quantity": 4,
+            "stock": {
+                "abbreviation": "BIMAS",
+                "dividends": 90.7,
+                "id": "2c3d4e5f-6789-01ab-23cd-45ef6789gh01",
+                "name": "Bim Birlesik Magazalar"
+            }
+        },
+        "-TXN0024": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0024",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 130,
+            "quantity": 5,
+            "stock": {
+                "abbreviation": "SASA",
+                "dividends": 150.3,
+                "id": "3f4g5h6i-7890-12bc-34de-56fg7890hi23",
+                "name": "Sasa Polyester"
+            }
+        },
+        "-TXN0025": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0025",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 50,
+            "quantity": 6,
+            "stock": {
+                "abbreviation": "ASELS",
+                "dividends": 120.5,
+                "id": "a19adc81-1330-4f87-88a9-8d9f21989c9f",
+                "name": "Aselsan"
+            }
+        },
+        "-TXN0026": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0026",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 70,
+            "quantity": 7,
+            "stock": {
+                "abbreviation": "THYAO",
+                "dividends": 85.3,
+                "id": "0e800ce8-13c3-44f3-9831-2ba3a0da6376",
+                "name": "Turk Hava Yollari"
+            }
+        },
+        "-TXN0027": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0027",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 90,
+            "quantity": 8,
+            "stock": {
+                "abbreviation": "GARAN",
+                "dividends": 60.2,
+                "id": "1a2b3c4d-5678-90ef-1234-56789abcdef0",
+                "name": "Garanti Bankasi"
+            }
+        },
+        "-TXN0028": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0028",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 110,
+            "quantity": 9,
+            "stock": {
+                "abbreviation": "BIMAS",
+                "dividends": 90.7,
+                "id": "2c3d4e5f-6789-01ab-23cd-45ef6789gh01",
+                "name": "Bim Birlesik Magazalar"
+            }
+        },
+        "-TXN0029": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0029",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 130,
+            "quantity": 10,
+            "stock": {
+                "abbreviation": "SASA",
+                "dividends": 150.3,
+                "id": "3f4g5h6i-7890-12bc-34de-56fg7890hi23",
+                "name": "Sasa Polyester"
+            }
+        },
+        "-TXN0030": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0030",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 50,
+            "quantity": 1,
+            "stock": {
+                "abbreviation": "ASELS",
+                "dividends": 120.5,
+                "id": "a19adc81-1330-4f87-88a9-8d9f21989c9f",
+                "name": "Aselsan"
+            }
+        },
+        "-TXN0031": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0031",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 70,
+            "quantity": 2,
+            "stock": {
+                "abbreviation": "THYAO",
+                "dividends": 85.3,
+                "id": "0e800ce8-13c3-44f3-9831-2ba3a0da6376",
+                "name": "Turk Hava Yollari"
+            }
+        },
+        "-TXN0032": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0032",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 90,
+            "quantity": 3,
+            "stock": {
+                "abbreviation": "GARAN",
+                "dividends": 60.2,
+                "id": "1a2b3c4d-5678-90ef-1234-56789abcdef0",
+                "name": "Garanti Bankasi"
+            }
+        },
+        "-TXN0033": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0033",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 110,
+            "quantity": 4,
+            "stock": {
+                "abbreviation": "BIMAS",
+                "dividends": 90.7,
+                "id": "2c3d4e5f-6789-01ab-23cd-45ef6789gh01",
+                "name": "Bim Birlesik Magazalar"
+            }
+        },
+        "-TXN0034": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0034",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 130,
+            "quantity": 5,
+            "stock": {
+                "abbreviation": "SASA",
+                "dividends": 150.3,
+                "id": "3f4g5h6i-7890-12bc-34de-56fg7890hi23",
+                "name": "Sasa Polyester"
+            }
+        },
+        "-TXN0035": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0035",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 50,
+            "quantity": 6,
+            "stock": {
+                "abbreviation": "ASELS",
+                "dividends": 120.5,
+                "id": "a19adc81-1330-4f87-88a9-8d9f21989c9f",
+                "name": "Aselsan"
+            }
+        },
+        "-TXN0036": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0036",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 70,
+            "quantity": 7,
+            "stock": {
+                "abbreviation": "THYAO",
+                "dividends": 85.3,
+                "id": "0e800ce8-13c3-44f3-9831-2ba3a0da6376",
+                "name": "Turk Hava Yollari"
+            }
+        },
+        "-TXN0037": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0037",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 90,
+            "quantity": 8,
+            "stock": {
+                "abbreviation": "GARAN",
+                "dividends": 60.2,
+                "id": "1a2b3c4d-5678-90ef-1234-56789abcdef0",
+                "name": "Garanti Bankasi"
+            }
+        },
+        "-TXN0038": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0038",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 110,
+            "quantity": 9,
+            "stock": {
+                "abbreviation": "BIMAS",
+                "dividends": 90.7,
+                "id": "2c3d4e5f-6789-01ab-23cd-45ef6789gh01",
+                "name": "Bim Birlesik Magazalar"
+            }
+        },
+        "-TXN0039": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0039",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 130,
+            "quantity": 10,
+            "stock": {
+                "abbreviation": "SASA",
+                "dividends": 150.3,
+                "id": "3f4g5h6i-7890-12bc-34de-56fg7890hi23",
+                "name": "Sasa Polyester"
+            }
+        },
+        "-TXN0040": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0040",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 50,
+            "quantity": 1,
+            "stock": {
+                "abbreviation": "ASELS",
+                "dividends": 120.5,
+                "id": "a19adc81-1330-4f87-88a9-8d9f21989c9f",
+                "name": "Aselsan"
+            }
+        },
+        "-TXN0041": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0041",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 70,
+            "quantity": 2,
+            "stock": {
+                "abbreviation": "THYAO",
+                "dividends": 85.3,
+                "id": "0e800ce8-13c3-44f3-9831-2ba3a0da6376",
+                "name": "Turk Hava Yollari"
+            }
+        },
+        "-TXN0042": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0042",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 90,
+            "quantity": 3,
+            "stock": {
+                "abbreviation": "GARAN",
+                "dividends": 60.2,
+                "id": "1a2b3c4d-5678-90ef-1234-56789abcdef0",
+                "name": "Garanti Bankasi"
+            }
+        },
+        "-TXN0043": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0043",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 110,
+            "quantity": 4,
+            "stock": {
+                "abbreviation": "BIMAS",
+                "dividends": 90.7,
+                "id": "2c3d4e5f-6789-01ab-23cd-45ef6789gh01",
+                "name": "Bim Birlesik Magazalar"
+            }
+        },
+        "-TXN0044": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0044",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 130,
+            "quantity": 5,
+            "stock": {
+                "abbreviation": "SASA",
+                "dividends": 150.3,
+                "id": "3f4g5h6i-7890-12bc-34de-56fg7890hi23",
+                "name": "Sasa Polyester"
+            }
+        },
+        "-TXN0045": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0045",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 50,
+            "quantity": 6,
+            "stock": {
+                "abbreviation": "ASELS",
+                "dividends": 120.5,
+                "id": "a19adc81-1330-4f87-88a9-8d9f21989c9f",
+                "name": "Aselsan"
+            }
+        },
+        "-TXN0046": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0046",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 70,
+            "quantity": 7,
+            "stock": {
+                "abbreviation": "THYAO",
+                "dividends": 85.3,
+                "id": "0e800ce8-13c3-44f3-9831-2ba3a0da6376",
+                "name": "Turk Hava Yollari"
+            }
+        },
+        "-TXN0047": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0047",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 90,
+            "quantity": 8,
+            "stock": {
+                "abbreviation": "GARAN",
+                "dividends": 60.2,
+                "id": "1a2b3c4d-5678-90ef-1234-56789abcdef0",
+                "name": "Garanti Bankasi"
+            }
+        },
+        "-TXN0048": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0048",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 110,
+            "quantity": 9,
+            "stock": {
+                "abbreviation": "BIMAS",
+                "dividends": 90.7,
+                "id": "2c3d4e5f-6789-01ab-23cd-45ef6789gh01",
+                "name": "Bim Birlesik Magazalar"
+            }
+        },
+        "-TXN0049": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0049",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 130,
+            "quantity": 10,
+            "stock": {
+                "abbreviation": "SASA",
+                "dividends": 150.3,
+                "id": "3f4g5h6i-7890-12bc-34de-56fg7890hi23",
+                "name": "Sasa Polyester"
+            }
+        },
+        "-TXN0050": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0050",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 50,
+            "quantity": 1,
+            "stock": {
+                "abbreviation": "ASELS",
+                "dividends": 120.5,
+                "id": "a19adc81-1330-4f87-88a9-8d9f21989c9f",
+                "name": "Aselsan"
+            }
+        },
+        "-TXN0051": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0051",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 70,
+            "quantity": 2,
+            "stock": {
+                "abbreviation": "THYAO",
+                "dividends": 85.3,
+                "id": "0e800ce8-13c3-44f3-9831-2ba3a0da6376",
+                "name": "Turk Hava Yollari"
+            }
+        },
+        "-TXN0052": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0052",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 90,
+            "quantity": 3,
+            "stock": {
+                "abbreviation": "GARAN",
+                "dividends": 60.2,
+                "id": "1a2b3c4d-5678-90ef-1234-56789abcdef0",
+                "name": "Garanti Bankasi"
+            }
+        },
+        "-TXN0053": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0053",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 110,
+            "quantity": 4,
+            "stock": {
+                "abbreviation": "BIMAS",
+                "dividends": 90.7,
+                "id": "2c3d4e5f-6789-01ab-23cd-45ef6789gh01",
+                "name": "Bim Birlesik Magazalar"
+            }
+        },
+        "-TXN0054": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0054",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 130,
+            "quantity": 5,
+            "stock": {
+                "abbreviation": "SASA",
+                "dividends": 150.3,
+                "id": "3f4g5h6i-7890-12bc-34de-56fg7890hi23",
+                "name": "Sasa Polyester"
+            }
+        },
+        "-TXN0055": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0055",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 50,
+            "quantity": 6,
+            "stock": {
+                "abbreviation": "ASELS",
+                "dividends": 120.5,
+                "id": "a19adc81-1330-4f87-88a9-8d9f21989c9f",
+                "name": "Aselsan"
+            }
+        },
+        "-TXN0056": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0056",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 70,
+            "quantity": 7,
+            "stock": {
+                "abbreviation": "THYAO",
+                "dividends": 85.3,
+                "id": "0e800ce8-13c3-44f3-9831-2ba3a0da6376",
+                "name": "Turk Hava Yollari"
+            }
+        },
+        "-TXN0057": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0057",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 90,
+            "quantity": 8,
+            "stock": {
+                "abbreviation": "GARAN",
+                "dividends": 60.2,
+                "id": "1a2b3c4d-5678-90ef-1234-56789abcdef0",
+                "name": "Garanti Bankasi"
+            }
+        },
+        "-TXN0058": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0058",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 110,
+            "quantity": 9,
+            "stock": {
+                "abbreviation": "BIMAS",
+                "dividends": 90.7,
+                "id": "2c3d4e5f-6789-01ab-23cd-45ef6789gh01",
+                "name": "Bim Birlesik Magazalar"
+            }
+        },
+        "-TXN0059": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0059",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 130,
+            "quantity": 10,
+            "stock": {
+                "abbreviation": "SASA",
+                "dividends": 150.3,
+                "id": "3f4g5h6i-7890-12bc-34de-56fg7890hi23",
+                "name": "Sasa Polyester"
+            }
+        },
+        "-TXN0060": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0060",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 50,
+            "quantity": 1,
+            "stock": {
+                "abbreviation": "ASELS",
+                "dividends": 120.5,
+                "id": "a19adc81-1330-4f87-88a9-8d9f21989c9f",
+                "name": "Aselsan"
+            }
+        },
+        "-TXN0061": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0061",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 70,
+            "quantity": 2,
+            "stock": {
+                "abbreviation": "THYAO",
+                "dividends": 85.3,
+                "id": "0e800ce8-13c3-44f3-9831-2ba3a0da6376",
+                "name": "Turk Hava Yollari"
+            }
+        },
+        "-TXN0062": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0062",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 90,
+            "quantity": 3,
+            "stock": {
+                "abbreviation": "GARAN",
+                "dividends": 60.2,
+                "id": "1a2b3c4d-5678-90ef-1234-56789abcdef0",
+                "name": "Garanti Bankasi"
+            }
+        },
+        "-TXN0063": {
+            "createDate": "2025-03-20T09:15:22.765432",
+            "date": "2025-03-20T08:45:00.000",
+            "dividends": 12.5,
+            "id": "txn-0063",
+            "note": "Uzun vadeli yat\u0131r\u0131m",
+            "price": 110,
+            "quantity": 4,
+            "stock": {
+                "abbreviation": "BIMAS",
+                "dividends": 90.7,
+                "id": "2c3d4e5f-6789-01ab-23cd-45ef6789gh01",
+                "name": "Bim Birlesik Magazalar"
+            }
+        }
+    }
+}

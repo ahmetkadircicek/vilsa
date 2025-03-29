@@ -7,9 +7,9 @@ import 'package:vilsa/core/constants/padding_constants.dart';
 import 'package:vilsa/core/extensions/context_extension.dart';
 import 'package:vilsa/core/extensions/price_formatter.dart';
 import 'package:vilsa/core/init/navigation/navigation_service.dart';
-import 'package:vilsa/features/add_stock/model/stock_model.dart';
 import 'package:vilsa/features/add_stock/view/add_stock_view.dart';
 import 'package:vilsa/features/portfolio/viewmodel/portfolio_view.dart.dart';
+import 'package:vilsa/features/stock/model/stock_model.dart';
 import 'package:vilsa/features/stock_details/view/stock_details_view.dart';
 import 'package:vilsa/features/stock_details/viewmodel/stock_details_view_model.dart';
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:vilsa/core/base/base_view_model.dart';
 
-class MainViewModel extends ChangeNotifier {
+/// ViewModel for managing main app navigation and structure
+class MainViewModel extends BaseViewModel {
   final PageController _pageController = PageController();
   int _selectedIndex = 0;
   bool _isResetting = false;
@@ -9,18 +11,20 @@ class MainViewModel extends ChangeNotifier {
   int get selectedIndex => _selectedIndex;
   bool get isResetting => _isResetting;
 
+  /// Update the selected index and navigate to the corresponding page
   void onItemTapped(int index) {
     _selectedIndex = index;
     _pageController.jumpToPage(index);
     notifyListeners();
   }
 
+  /// Handle page change event
   void onPageChanged(int index) {
     _selectedIndex = index;
     notifyListeners();
   }
 
-  // Helper method to set reset state
+  /// Set application reset state
   void setResetting(bool value) {
     _isResetting = value;
     notifyListeners();

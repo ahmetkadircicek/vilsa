@@ -1,45 +1,58 @@
-import 'package:flutter/material.dart';
-import 'package:vilsa/core/init/network/firebase_service.dart';
-import 'package:vilsa/features/add_stock/model/stock_model.dart';
+import 'package:vilsa/core/base/base_view_model.dart';
+import 'package:vilsa/core/init/network/data_service.dart';
+import 'package:vilsa/core/init/network/stock_service.dart';
+import 'package:vilsa/features/stock/model/stock_model.dart';
 
-class PortfolioViewModel extends ChangeNotifier {
+/// ViewModel for managing the portfolio screen
+class PortfolioViewModel extends BaseViewModel {
+  final DataService _dataService = DataService.instance;
+  final StockService _stockService = StockService.instance;
   List<StockModel> _stocks = [];
-  bool _isLoading = false;
 
   List<StockModel> get stocks => _stocks;
-  bool get isLoading => _isLoading;
 
   PortfolioViewModel() {
     fetchStocks();
   }
 
+  /// Fetch all stocks in the portfolio
   Future<void> fetchStocks() async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      _stocks = await FirebaseService.instance.fetchStock();
-    } catch (e) {
-      print("Error fetching stocks: $e");
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    await executeAsync(() async {
+      _stocks = await _stockService.fetchAll();
+      return _stocks;
+    }, errorPrefix: "Failed to fetch stocks");
   }
 
+  /// Remove a stock from the portfolio
   Future<void> removeStock(String stockId) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      await FirebaseService.instance.removeStock(stockId);
+    await executeAsync(() async {
+      await _dataService.deleteStockWithTransactions(stockId);
       _stocks.removeWhere((stock) => stock.id == stockId);
-    } catch (e) {
-      print("Error removing stock: $e");
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+      return true;
+    }, errorPrefix: "Failed to remove stock");
+  }
+
+  /// Get total portfolio value
+  double get totalPortfolioValue {
+    return _stocks.fold(0.0, (total, stock) {
+      int quantity = stock.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+      return total + (quantity * stock.currentPrice);
+    });
+  }
+
+  /// Sort stocks by value (descending)
+  List<StockModel> getStocksSortedByValue() {
+    List<StockModel> sorted = List.from(_stocks);
+    sorted.sort((a, b) {
+      int quantityA = a.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+      int quantityB = b.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+
+      double valueA = quantityA * a.currentPrice;
+      double valueB = quantityB * b.currentPrice;
+
+      return valueB.compareTo(valueA); // Descending order
+    });
+    return sorted;
   }
 }
 // Updated on 2025-01-03 - create settings page

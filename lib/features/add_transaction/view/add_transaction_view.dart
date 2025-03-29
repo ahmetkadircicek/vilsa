@@ -8,8 +8,8 @@ import 'package:vilsa/core/constants/general_constants.dart';
 import 'package:vilsa/core/constants/padding_constants.dart';
 import 'package:vilsa/core/extensions/context_extension.dart';
 import 'package:vilsa/core/extensions/price_input_formatter.dart';
-import 'package:vilsa/features/add_stock/model/stock_model.dart';
 import 'package:vilsa/features/add_transaction/viewmodel/add_transaction_view_model.dart';
+import 'package:vilsa/features/stock/model/stock_model.dart';
 
 class AddTransactionView extends StatelessWidget {
   final StockModel stock;
@@ -54,6 +54,7 @@ class AddTransactionView extends StatelessWidget {
               _buildDateRangePicker(context, viewModel),
               _buildPriceField(viewModel, context),
               _buildQuantityField(viewModel, context),
+              _buildDividendsField(viewModel, context),
               _buildNoteField(viewModel, context),
             ],
           ),
@@ -68,61 +69,12 @@ class AddTransactionView extends StatelessWidget {
     return Padding(
       padding: PaddingConstants.symmetricHorizontalMedium + PaddingConstants.onlyBottomMedium,
       child: GeneralButton(
-        onPressed: () {
-          if (viewModel.priceController.text.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                backgroundColor: Colors.red,
-                content: Content(
-                  text: 'Lütfen fiyat alanını doldurun!',
-                  isBold: true,
-                  isCentred: true,
-                ),
-              ),
-            );
-            return;
-          }
+        onPressed: () async {
+          final transaction = await viewModel.sendData(stock, context: context);
 
-          if (viewModel.quantityController.text.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                backgroundColor: Colors.red,
-                content: Content(
-                  text: 'Lütfen adet alanını doldurun!',
-                  isBold: true,
-                  isCentred: true,
-                ),
-              ),
-            );
-            return;
+          if (transaction != null) {
+            Navigator.pop(context);
           }
-
-          if (viewModel.selectedDate == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                backgroundColor: Colors.red,
-                content: Content(
-                  text: 'Lütfen tarih seçin!',
-                  isBold: true,
-                  isCentred: true,
-                ),
-              ),
-            );
-            return;
-          }
-          viewModel.sendData(stock);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: context.primary,
-              content: Content(
-                text: 'İşlem güncellendi!',
-                isBold: true,
-                isCentred: true,
-              ),
-            ),
-          );
-
-          Navigator.pop(context);
         },
         text: 'Ekle',
         textColor: context.onPrimary,
@@ -267,6 +219,25 @@ class AddTransactionView extends StatelessWidget {
       controller: viewModel.quantityController,
       decoration: InputDecoration(
         hintText: 'Adet girin',
+        hintStyle: GoogleFonts.montserrat(
+          letterSpacing: 1,
+        ),
+        filled: true,
+        fillColor: context.surfaceContainer,
+        border: OutlineInputBorder(
+          borderRadius: GeneralConstants.instance.borderRadius,
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDividendsField(AddTransactionViewModel viewModel, BuildContext context) {
+    return TextField(
+      inputFormatters: [CurrencyInputFormatter()],
+      controller: viewModel.dividendsController,
+      decoration: InputDecoration(
+        hintText: 'Temettü tutarını girin (opsiyonel)',
         hintStyle: GoogleFonts.montserrat(
           letterSpacing: 1,
         ),

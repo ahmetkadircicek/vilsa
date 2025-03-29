@@ -1,12 +1,16 @@
-import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:vilsa/core/init/network/firebase_service.dart';
-import 'package:vilsa/features/add_stock/model/stock_model.dart';
+import 'package:vilsa/core/base/base_view_model.dart';
+import 'package:vilsa/core/init/network/stock_service.dart';
+import 'package:vilsa/core/init/network/transaction_service.dart';
 import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
+import 'package:vilsa/features/stock/model/stock_model.dart';
 
-class StockDetailsViewModel extends ChangeNotifier {
+/// ViewModel for managing stock details screen
+class StockDetailsViewModel extends BaseViewModel {
+  final StockService _stockService = StockService.instance;
+  final TransactionService _transactionService = TransactionService.instance;
+
   List<TransactionModel> _transactions = [];
-  bool _isLoading = false;
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 365)); // Default to 1 year ago
   DateTime _endDate = DateTime.now(); // Default to today
   StockModel? _currentStock;
@@ -28,12 +32,11 @@ class StockDetailsViewModel extends ChangeNotifier {
   }
 
   List<TransactionModel> get transactions => _transactions;
-  bool get isLoading => _isLoading;
   DateTime get startDate => _startDate;
   DateTime get endDate => _endDate;
   StockModel? get currentStock => _currentStock;
 
-  // Filtered transactions based on the selected date range
+  /// Get transactions filtered by the selected date range
   List<TransactionModel> get filteredTransactions {
     if (_cachedFilteredTransactions != null) return _cachedFilteredTransactions!;
 
@@ -44,23 +47,18 @@ class StockDetailsViewModel extends ChangeNotifier {
     return _cachedFilteredTransactions!;
   }
 
+  /// Fetch transactions for a specific stock
   Future<void> fetchTransactions(String stockId) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
+    await executeAsync(() async {
       // First fetch the stock to get its details
-      final stock = await FirebaseService.instance.fetchStockById(stockId);
-      if (stock != null) {
-        _currentStock = stock;
-      }
+      _currentStock = await _stockService.fetchById(stockId);
 
-      // Then fetch all transactions for this stock
-      final allTransactions = await FirebaseService.instance.fetchTransactions();
+      // Then fetch all transactions
+      final allTransactions = await _transactionService.fetchAll();
 
       // Filter transactions by stock ID
       _transactions = allTransactions.where((transaction) {
-        return transaction.stockId == stockId || transaction.stock.id == stockId;
+        return transaction.stockId == stockId || transaction.stock?.id == stockId;
       }).toList();
 
       // Sort transactions by date
@@ -68,15 +66,12 @@ class StockDetailsViewModel extends ChangeNotifier {
 
       // Invalidate cache when transactions change
       _invalidateCache();
-    } catch (e) {
-      debugPrint("Error fetching transactions: $e");
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+
+      return _transactions;
+    }, errorPrefix: "Failed to fetch transactions");
   }
 
-  // Update date range
+  /// Update date range
   void setDateRange(DateTime start, DateTime end) {
     _startDate = start;
     _endDate = end;
@@ -86,7 +81,7 @@ class StockDetailsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Method to calculate total cost price for the filtered range
+  /// Calculate total cost price for the filtered range
   double calculateTotalCostPrice() {
     if (_cachedTotalCostPrice != null) return _cachedTotalCostPrice!;
 
@@ -99,7 +94,7 @@ class StockDetailsViewModel extends ChangeNotifier {
     return total;
   }
 
-  // Method to calculate total dividends for the filtered range
+  /// Calculate total dividends for the filtered range
   double calculateTotalDividends() {
     if (_cachedTotalDividends != null) return _cachedTotalDividends!;
 
@@ -121,7 +116,7 @@ class StockDetailsViewModel extends ChangeNotifier {
     return transactionDividends;
   }
 
-  // Method to calculate dividend yield for the filtered range
+  /// Calculate dividend yield for the filtered range
   double calculateDividendYield() {
     if (_cachedDividendYield != null) return _cachedDividendYield!;
 
@@ -132,7 +127,7 @@ class StockDetailsViewModel extends ChangeNotifier {
     return _cachedDividendYield!;
   }
 
-  // Get data points for chart display
+  /// Get data points for chart display
   List<Map<String, dynamic>> getChartData() {
     if (_cachedChartData != null) return _cachedChartData!;
 

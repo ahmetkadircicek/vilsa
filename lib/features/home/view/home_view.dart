@@ -187,8 +187,22 @@ class HomeView extends StatelessWidget {
             },
             getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
               return touchedBarSpots.map((barSpot) {
+                final index = barSpot.x.toInt();
+                if (index >= 0 && index < chartData.length) {
+                  final datePoint = chartData[index];
+                  final formattedDate = DateFormat('dd/MM/yy').format(datePoint.date);
+
+                  return LineTooltipItem(
+                    '$formattedDate\n${datePoint.value.toPrice()}',
+                    TextStyle(
+                      color: context.onPrimary,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  );
+                }
+
                 return LineTooltipItem(
-                  viewModel.totalBalance.toPrice(),
+                  barSpot.y.toPrice(),
                   TextStyle(
                     color: context.onPrimary,
                     fontWeight: FontWeight.w900,
@@ -221,15 +235,24 @@ class HomeView extends StatelessWidget {
             if (index < 0 || index >= chartData.length) {
               return const SizedBox.shrink();
             }
-            DateTime date = chartData[index].date;
-            String formattedDate = viewModel.formatDisplayDate(date);
 
-            return Label(
-              text: formattedDate,
-              fontSize: 10,
-              color: Colors.grey,
-              isBold: true,
-            );
+            DateTime date = chartData[index].date;
+
+            if (index == 0 || index == chartData.length - 1 || index == chartData.length ~/ 2) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  DateFormat('dd/MM/yy').format(date),
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              );
+            }
+
+            return const SizedBox.shrink();
           },
         ),
       ),

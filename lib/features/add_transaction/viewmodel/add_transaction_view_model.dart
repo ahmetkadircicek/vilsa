@@ -1,12 +1,15 @@
 import 'package:board_datetime_picker/board_datetime_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
-import 'package:vilsa/core/extensions/string_extension.dart';
-import 'package:vilsa/core/init/network/firebase_service.dart';
-import 'package:vilsa/features/add_stock/model/stock_model.dart';
+import 'package:vilsa/core/base/base_view_model.dart';
+import 'package:vilsa/core/init/network/transaction_service.dart';
 import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
+import 'package:vilsa/features/stock/model/stock_model.dart';
 
-class AddTransactionViewModel extends ChangeNotifier {
+/// ViewModel for adding transactions
+class AddTransactionViewModel extends BaseViewModel {
+  final TransactionService _transactionService = TransactionService.instance;
+
   final TextEditingController nameController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
@@ -27,26 +30,111 @@ class AddTransactionViewModel extends ChangeNotifier {
 
   DateTime? get selectedDate => _selectedDate;
 
+  /// Set the selected date
   void setSelectedDate(DateTime date) {
     _selectedDate = date;
     notifyListeners();
   }
 
-  Future<void> sendData(StockModel stock) async {
+  /// Para birimini sayısal değere dönüştüren yardımcı metot
+  /// "₺1.234,56" gibi formatlı bir string'i 1234.56 double değerine dönüştürür
+  double? parseCurrencyValue(String text, {bool allowZero = false}) {
+    if (text.isEmpty) {
+      return null;
+    }
+
     try {
+      // Para birimi sembolünü ve binlik ayırıcılarını kaldır
+      String parsedText = text
+          .replaceAll('₺', '') // TL sembolünü kaldır
+          .replaceAll('.', '') // Binlik ayraçları kaldır
+          .trim() // Boşlukları kaldır
+          .replaceAll(',', '.'); // Virgülü nokta ile değiştir (ondalık ayırıcı)
+
+      double value = double.parse(parsedText);
+
+      // Sıfır kontrolü
+      if (!allowZero && value <= 0) {
+        return null;
+      }
+
+      return value;
+    } catch (e) {
+      debugPrint("Currency parsing error: $e for value '$text'");
+      return null;
+    }
+  }
+
+  /// Save the transaction data
+  Future<TransactionModel?> sendData(StockModel stock, {required BuildContext context}) async {
+    return await executeAsync<TransactionModel?>(() async {
+      // Validation checks
+      double? price = parseCurrencyValue(priceController.text);
+      if (price == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text("Fiyat alanı geçerli bir değer olmalı ve sıfırdan büyük olmalı"),
+              backgroundColor: Colors.red),
+        );
+        return null;
+      }
+
+      // Adet kontrolüp
+      int? quantity;
+      try {
+        quantity = int.tryParse(quantityController.text);
+        if (quantity == null || quantity <= 0) {
+          throw Exception();
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text("Miktar alanı geçerli bir tam sayı olmalı ve sıfırdan büyük olmalı"),
+              backgroundColor: Colors.red),
+        );
+        return null;
+      }
+
+      // Temettü alanını kontrol et (isteğe bağlı)
+      double dividends = 0.0;
+      if (dividendsController.text.isNotEmpty) {
+        double? parsedDividends = parseCurrencyValue(dividendsController.text, allowZero: true);
+        if (parsedDividends == null || parsedDividends < 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text("Temettü alanı geçerli bir değer olmalı ve negatif olmamalı"),
+                backgroundColor: Colors.red),
+          );
+          return null;
+        }
+        dividends = parsedDividends;
+      }
+
+      // Create transaction with validated values
       final transaction = TransactionModel(
-        id: const Uuid().v4(), // Use UUID for id
-        stock: stock, // Use stockId property
-        price: priceController.text.toDouble(), // Ensure price is a double
-        quantity: int.parse(quantityController.text), // Ensure quantity is an int
+        id: const Uuid().v4(),
+        stockId: stock.id,
+        stockName: stock.name,
+        stock: stock,
+        price: price,
+        quantity: quantity,
         note: noteController.text,
-        date: _selectedDate ?? DateTime.now(), // Use selectedDate for transaction date
+        date: _selectedDate ?? DateTime.now(),
         createDate: DateTime.now(),
-        dividends: dividendsController.text.toDouble(),
-        stockId: '',
+        dividends: dividends,
       );
 
-      await FirebaseService.instance.saveTransaction(transaction);
+      // Log the transaction data before saving
+      debugPrint(
+          "💹 Saving transaction: ID=${transaction.id}, Stock=${stock.name}, Price=$price, Quantity=$quantity, Dividends=$dividends");
+
+      // Save to database
+      await _transactionService.save(transaction);
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("İşlem başarıyla kaydedildi"), backgroundColor: Colors.green),
+      );
 
       // Clear fields after saving
       nameController.clear();
@@ -54,16 +142,14 @@ class AddTransactionViewModel extends ChangeNotifier {
       quantityController.clear();
       noteController.clear();
       abbreviationController.clear();
-      dividendsController.clear(); // Clear dividends field
+      dividendsController.clear();
 
       // Reset date
       _selectedDate = DateTime.now();
-      _stockId = null; // Clear stockId after saving
+      _stockId = null;
 
-      notifyListeners();
-    } catch (e) {
-      print("Error parsing data: $e");
-    }
+      return transaction;
+    }, errorPrefix: "Failed to save transaction");
   }
 
   @override

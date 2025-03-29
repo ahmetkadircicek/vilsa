@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
-import 'package:vilsa/core/init/network/firebase_service.dart';
-import 'package:vilsa/features/add_stock/model/stock_model.dart';
+import 'package:vilsa/core/base/base_view_model.dart';
+import 'package:vilsa/core/init/network/stock_service.dart';
+import 'package:vilsa/core/init/network/transaction_service.dart';
 import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
+import 'package:vilsa/features/stock/model/stock_model.dart';
 
-class StockViewModel extends ChangeNotifier {
+/// ViewModel for managing stocks
+class StockViewModel extends BaseViewModel {
+  final StockService _stockService = StockService.instance;
+  final TransactionService _transactionService = TransactionService.instance;
+
   final TextEditingController nameController = TextEditingController();
   final TextEditingController abbreviationController = TextEditingController();
   final TextEditingController dividendsController = TextEditingController();
+
   List<StockModel> stocks = [];
-  bool _isLoading = false;
   bool _isEditing = false;
   String? _editingStockId;
 
-  bool get isLoading => _isLoading;
   bool get isEditing => _isEditing;
   String? get editingStockId => _editingStockId;
 
@@ -21,11 +26,12 @@ class StockViewModel extends ChangeNotifier {
     init();
   }
 
+  /// Initialize the ViewModel
   Future<void> init() async {
     await fetchStocks();
   }
 
-  // Set up controllers for editing a stock
+  /// Set up controllers for editing a stock
   void setupForEdit(StockModel stock) {
     _isEditing = true;
     _editingStockId = stock.id;
@@ -35,7 +41,7 @@ class StockViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Clear editing state
+  /// Clear editing state
   void clearEditState() {
     _isEditing = false;
     _editingStockId = null;
@@ -45,37 +51,35 @@ class StockViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Add or update a stock
   Future<void> addStock(BuildContext context) async {
-    _isLoading = true;
-    notifyListeners();
+    await executeAsync(() async {
+      final name = nameController.text;
+      final abbreviation = abbreviationController.text;
+      final dividends = double.tryParse(dividendsController.text.replaceAll(',', '.')) ?? 0.0;
 
-    final name = nameController.text;
-    final abbreviation = abbreviationController.text;
-    final dividends = double.tryParse(dividendsController.text.replaceAll(',', '.')) ?? 0.0;
+      if (name.isEmpty || abbreviation.isEmpty || dividends <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.red,
+            content: Text('Lütfen tüm alanları doğru şekilde doldurun!'),
+          ),
+        );
+        return null;
+      }
 
-    if (name.isEmpty || abbreviation.isEmpty || dividends <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Colors.red,
-          content: Text('Lütfen tüm alanları doğru şekilde doldurun!'),
-        ),
-      );
-      _isLoading = false;
-      notifyListeners();
-      return;
-    }
-
-    try {
       if (_isEditing && _editingStockId != null) {
         // Update existing stock
         final stockToUpdate = stocks.firstWhere((s) => s.id == _editingStockId);
-        final updatedStock = stockToUpdate.copyWith(
+        final updatedStock = StockModel(
+          id: stockToUpdate.id,
           name: name,
           abbreviation: abbreviation,
           dividends: dividends,
+          transactions: stockToUpdate.transactions,
         );
 
-        await FirebaseService.instance.updateStock(updatedStock);
+        await _stockService.update(updatedStock);
 
         // Update local list
         final index = stocks.indexWhere((s) => s.id == _editingStockId);
@@ -84,12 +88,16 @@ class StockViewModel extends ChangeNotifier {
         }
 
         // Display success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.green,
-            content: Text('$name hissesi güncellendi!'),
-          ),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.green,
+              content: Text('$name hissesi güncellendi!'),
+            ),
+          );
+        }
+
+        return updatedStock;
       } else {
         // Add new stock
         final String stockId = const Uuid().v4();
@@ -101,54 +109,52 @@ class StockViewModel extends ChangeNotifier {
           transactions: [], // Initialize with an empty list of transactions
         );
 
-        await FirebaseService.instance.saveStock(newStock);
+        await _stockService.save(newStock);
         stocks.add(newStock); // Add to local list
 
         // Display success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.green,
-            content: Text('$name hissesi eklendi!'),
-          ),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.green,
+              content: Text('$name hissesi eklendi!'),
+            ),
+          );
+        }
+
+        return newStock;
       }
-    } catch (e) {
-      // Display error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: Colors.red,
-          content: Text('Hata oluştu: $e'),
-        ),
-      );
-    } finally {
+    }, errorPrefix: "Failed to save stock")
+        .then((_) {
       // Clear form and editing state
       clearEditState();
-      _isLoading = false;
-      notifyListeners();
-    }
+    });
   }
 
+  /// Add a transaction to a stock
   Future<void> addTransactionToStock(String stockId, TransactionModel transaction) async {
-    // Find the stock by ID and add the transaction
-    final stock = stocks.firstWhere((s) => s.id == stockId);
-    stock.transactions.add(transaction);
-    await FirebaseService.instance.saveTransaction(transaction);
-    notifyListeners();
+    await executeAsync(() async {
+      // Find the stock by ID and add the transaction
+      final stock = stocks.firstWhere((s) => s.id == stockId);
+      final updatedTransactions = [...stock.transactions, transaction];
+
+      // Save the transaction
+      await _transactionService.save(transaction);
+
+      // Update stock with new transaction
+      final updatedStock = stock.copyWith(transactions: updatedTransactions);
+      stocks[stocks.indexWhere((s) => s.id == stockId)] = updatedStock;
+
+      return transaction;
+    }, errorPrefix: "Failed to add transaction to stock");
   }
 
+  /// Fetch all stocks
   Future<void> fetchStocks() async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      final fetchedStocks = await FirebaseService.instance.fetchStock();
-      stocks = fetchedStocks;
-    } catch (e) {
-      print("Error fetching stocks: $e");
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    await executeAsync(() async {
+      stocks = await _stockService.fetchAll();
+      return stocks;
+    }, errorPrefix: "Failed to fetch stocks");
   }
 
   @override

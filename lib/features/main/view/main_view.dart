@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:vilsa/core/constants/padding_constants.dart';
 import 'package:vilsa/core/extensions/context_extension.dart';
 import 'package:vilsa/features/home/view/home_view.dart';
-import 'package:vilsa/features/home/viewmodel/home_view_model.dart';
 import 'package:vilsa/features/main/viewmodel/main_view_model.dart';
 import 'package:vilsa/features/stock/view/stock_view.dart';
 
@@ -183,7 +182,6 @@ class MainViewState extends State<MainView> {
             onPressed: () {
               Navigator.of(context).pop();
               // Access the HomeViewModel to import sample data
-              Provider.of<HomeViewModel>(context, listen: false).importSampleData(context);
             },
             child: const Text('Yükle'),
           ),

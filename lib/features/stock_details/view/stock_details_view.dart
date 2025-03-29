@@ -7,8 +7,8 @@ import 'package:vilsa/core/constants/general_constants.dart';
 import 'package:vilsa/core/constants/padding_constants.dart';
 import 'package:vilsa/core/extensions/context_extension.dart';
 import 'package:vilsa/core/extensions/price_formatter.dart';
-import 'package:vilsa/features/add_stock/model/stock_model.dart';
 import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
+import 'package:vilsa/features/stock/model/stock_model.dart';
 import 'package:vilsa/features/stock_details/viewmodel/stock_details_view_model.dart';
 
 class StockDetailsView extends StatefulWidget {
@@ -219,20 +219,26 @@ class _StockDetailsViewState extends State<StockDetailsView> {
               return const SizedBox.shrink();
             }
 
-            // Tarih ile birlikte işlem ID'sinin son 3 karakterini gösterelim
+            // Sadece başlangıç ve bitiş noktalarında tam tarih göster
             final date = chartData[index]['date'] as String;
-            final id = chartData[index]['id'] as String;
-            final shortId = id.length > 3 ? id.substring(id.length - 3) : id;
+            DateTime parsedDate = DateTime.parse(date);
 
-            // Her 3. değer için tam tarih göster
-            String formattedDate = index % 3 == 0 ? DateFormat('dd/MM').format(DateTime.parse(date)) : shortId;
+            // Sadece başlangıç, orta ve son noktalarda tarih göster
+            if (index == 0 || index == chartData.length - 1 || index == chartData.length ~/ 2) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  DateFormat('dd/MM').format(parsedDate),
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              );
+            }
 
-            return Label(
-              text: formattedDate,
-              fontSize: 10,
-              color: Colors.grey,
-              isBold: true,
-            );
+            return const SizedBox.shrink();
           },
         ),
       ),

@@ -4,7 +4,7 @@ import 'package:vilsa/core/components/general_button.dart';
 import 'package:vilsa/core/components/general_text.dart';
 import 'package:vilsa/core/constants/padding_constants.dart';
 import 'package:vilsa/core/extensions/context_extension.dart';
-import 'package:vilsa/features/add_stock/model/stock_model.dart';
+import 'package:vilsa/features/stock/model/stock_model.dart';
 import 'package:vilsa/features/stock/viewmodel/stock_view_model.dart';
 
 class AddStockView extends StatelessWidget {

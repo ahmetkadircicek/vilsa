@@ -1,212 +1,254 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:vilsa/core/init/network/firebase_service.dart';
-import 'package:vilsa/features/add_stock/model/stock_model.dart';
+import 'package:vilsa/core/base/base_view_model.dart';
+import 'package:vilsa/core/init/network/data_service.dart';
 import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
 import 'package:vilsa/features/home/model/chart_data_point_model.dart';
+import 'package:vilsa/features/stock/model/stock_model.dart';
 
-class HomeViewModel extends ChangeNotifier {
+/// ViewModel to manage home screen data and operations
+class HomeViewModel extends BaseViewModel {
+  final DataService _dataService = DataService.instance;
+
   List<StockModel> _stocks = [];
   List<TransactionModel> _allTransactions = [];
-  bool _isLoading = false;
-  bool _isImporting = false;
 
   // Default date range: one year ago to today
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 365));
   DateTime _endDate = DateTime.now();
 
+  bool _isImporting = false;
+
+  List<StockModel> get stocks => _stocks;
+  List<TransactionModel> get allTransactions => _allTransactions;
+  DateTime get startDate => _startDate;
+  DateTime get endDate => _endDate;
+  bool get isImporting => _isImporting;
+
+  /// Load portfolio data including stocks and transactions
+  Future<void> loadPortfolioData() async {
+    await fetchStocksWithTransactions();
+  }
+
   HomeViewModel() {
     init();
   }
 
-  List<StockModel> get stocks => _stocks;
-  List<TransactionModel> get allTransactions => _allTransactions;
-  bool get isLoading => _isLoading;
-  bool get isImporting => _isImporting;
-  DateTime get startDate => _startDate;
-  DateTime get endDate => _endDate;
+  /// Initialize the ViewModel by fetching data
+  Future<void> init() async {
+    await fetchStocksWithTransactions();
+  }
 
-  // Tarih aralığına göre filtrelenmiş işlemler
+  /// Fetch all stocks with their transactions
+  Future<void> fetchStocksWithTransactions() async {
+    await executeAsync(() async {
+      _stocks = await _dataService.fetchStocksWithTransactions();
+
+      // Collect all transactions from all stocks
+      _allTransactions = [];
+      for (var stock in _stocks) {
+        _allTransactions.addAll(stock.transactions);
+      }
+
+      return _stocks;
+    }, errorPrefix: "Failed to fetch stocks with transactions");
+  }
+
+  /// Get transactions filtered by the selected date range
   List<TransactionModel> get filteredTransactions {
     return _allTransactions.where((transaction) {
       return transaction.date.isAfter(_startDate) && transaction.date.isBefore(_endDate.add(const Duration(days: 1)));
     }).toList();
   }
 
-  // Toplam bakiye hesaplama
+  /// Calculate the total balance from filtered transactions
   double get totalBalance {
     return filteredTransactions.fold(0.0, (total, transaction) {
       return total + (transaction.price * transaction.quantity);
     });
   }
 
-  // Toplam temettü hesaplama
+  /// Calculate the total dividends from filtered transactions
   double get totalDividends {
     return filteredTransactions.fold(0.0, (total, transaction) {
       return total + transaction.dividends;
     });
   }
 
-  void init() {
-    fetchStocksWithTransactions();
-  }
-
-  // Örnek verileri yükle
-  Future<void> importSampleData(BuildContext context) async {
-    _isImporting = true;
-    notifyListeners();
-
-    try {
-      // Örnek veri dosyasının yolunu belirt
-      const String sampleDataPath = 'asset/sample_data.json';
-
-      // Firebase servisini kullanarak örnek verileri içe aktar
-      await FirebaseService.instance.importJsonData(sampleDataPath);
-
-      // Verileri yeniden yükle
-      await fetchStocksWithTransactions();
-
-      // Başarı mesajı göster
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Colors.green,
-          content: Text('Örnek veriler başarıyla yüklendi!'),
-        ),
-      );
-    } catch (e) {
-      // Hata mesajı göster
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: Colors.red,
-          content: Text('Örnek veri yükleme hatası: $e'),
-        ),
-      );
-      debugPrint("Örnek veri yükleme hatası: $e");
-    } finally {
-      _isImporting = false;
-      notifyListeners();
-    }
-  }
-
-  // Stok ve işlemleri beraber getir
-  Future<void> fetchStocksWithTransactions() async {
-    _isLoading = true;
-    notifyListeners();
-    print("Fetching stocks with transactions..."); // Debug print
-
-    try {
-      _stocks = await FirebaseService.instance.fetchStocksWithTransactions();
-
-      // Tüm işlemleri birleştir
-      _allTransactions = [];
-      for (var stock in _stocks) {
-        if (stock.transactions.isNotEmpty) {
-          _allTransactions.addAll(stock.transactions);
-        }
+  /// Get the total investment amount (sum of buy transactions)
+  double get totalInvestment {
+    return _allTransactions.fold(0.0, (total, transaction) {
+      if (transaction.quantity > 0) {
+        return total + (transaction.price * transaction.quantity);
       }
-
-      // İşlemleri tarihe göre sırala
-      _allTransactions.sort((a, b) => a.date.compareTo(b.date));
-
-      print("Stocks with transactions fetched: ${_stocks.length} stocks, ${_allTransactions.length} transactions");
-    } catch (e) {
-      print("Error fetching stocks with transactions: $e");
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+      return total;
+    });
   }
 
-  // Tarih aralığını güncelle
+  /// Get the estimated current value of the portfolio
+  double get currentValue {
+    double value = 0.0;
+    for (var stock in _stocks) {
+      // Calculate total quantity owned
+      int totalQuantity = stock.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+      value += totalQuantity * stock.currentPrice;
+    }
+    return value;
+  }
+
+  /// Calculate total profit/loss (current value - total investment)
+  double get totalProfitLoss {
+    return currentValue - totalInvestment;
+  }
+
+  /// Calculate profit/loss percentage
+  double get totalProfitLossPercentage {
+    if (totalInvestment == 0) return 0.0;
+    return (totalProfitLoss / totalInvestment) * 100;
+  }
+
+  /// Calculate total annual dividends
+  double get totalAnnualDividends {
+    return _stocks.fold(0.0, (total, stock) {
+      // Calculate total quantity owned
+      int totalQuantity = stock.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+      // Annual dividend per share * quantity
+      return total + (stock.dividends * totalQuantity);
+    });
+  }
+
+  /// Calculate dividend yield percentage
+  double get dividendYield {
+    if (totalInvestment == 0) return 0.0;
+    return (totalAnnualDividends / totalInvestment) * 100;
+  }
+
+  /// Get top stocks by current value
+  List<StockModel> get topStocks {
+    // Create a sorted copy of stocks
+    List<StockModel> sortedStocks = List.from(_stocks);
+
+    // Sort by current value (price * total quantity)
+    sortedStocks.sort((a, b) {
+      int quantityA = a.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+      int quantityB = b.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+
+      double valueA = quantityA * a.currentPrice;
+      double valueB = quantityB * b.currentPrice;
+
+      return valueB.compareTo(valueA); // Descending order
+    });
+
+    return sortedStocks;
+  }
+
+  /// Get recent transactions sorted by date
+  List<TransactionModel> get recentTransactions {
+    List<TransactionModel> sorted = List.from(_allTransactions);
+    sorted.sort((a, b) => b.date.compareTo(a.date)); // Descending order (newest first)
+    return sorted;
+  }
+
+  /// Navigate to transactions screen
+  void navigateToTransactions(BuildContext context) {
+    Navigator.pushNamed(context, '/transactions');
+  }
+
+  /// Navigate to portfolio screen
+  void navigateToPortfolio(BuildContext context) {
+    Navigator.pushNamed(context, '/portfolio');
+  }
+
+  /// Navigate to stock details screen
+  void navigateToStockDetails(BuildContext context, StockModel stock) {
+    Navigator.pushNamed(context, '/stock-details', arguments: stock);
+  }
+
+  /// Set the date range for data filtering
   void setDateRange(DateTime start, DateTime end) {
     _startDate = start;
     _endDate = end;
     notifyListeners();
   }
 
-  // Grafik için veri noktaları oluştur
+  /// Generate chart data points based on the filtered transactions
   List<ChartDataPoint> getChartData() {
     if (filteredTransactions.isEmpty) return [];
 
-    // Tarihe göre işlemleri grupla
-    Map<DateTime, double> groupedData = {};
-
-    // En az 1, en çok 12 nokta göster
-    final daysBetween = _endDate.difference(_startDate).inDays + 1;
-    final interval = _calculateInterval(daysBetween);
-
-    // Boş veri noktalarını oluştur
-    DateTime currentDate = DateTime(_startDate.year, _startDate.month, _startDate.day);
-    while (!currentDate.isAfter(_endDate)) {
-      final normalizedDate = DateTime(currentDate.year, currentDate.month, currentDate.day);
-      groupedData[normalizedDate] = 0.0;
-      currentDate = currentDate.add(Duration(days: interval));
-    }
-
-    // İşlemleri tarihe göre grupla
-    for (var transaction in filteredTransactions) {
-      final transactionDate = DateTime(transaction.date.year, transaction.date.month, transaction.date.day);
-
-      // En yakın gruplandırılmış tarihi bul
-      DateTime? closestDate;
-      int smallestDifference = 10000;
-
-      for (var date in groupedData.keys) {
-        final difference = (date.difference(transactionDate).inDays).abs();
-        if (difference < smallestDifference) {
-          smallestDifference = difference;
-          closestDate = date;
-        }
-      }
-
-      if (closestDate != null) {
-        final transactionValue = transaction.price * transaction.quantity;
-        groupedData[closestDate] = (groupedData[closestDate] ?? 0) + transactionValue;
-      }
-    }
-
-    return groupedData.entries.map((entry) {
-      return ChartDataPoint(date: entry.key, value: entry.value);
-    }).toList()
+    // Filtrelenmiş işlemleri tarih sırasına göre sıralayalım
+    final sortedTransactions = List<TransactionModel>.from(filteredTransactions)
       ..sort((a, b) => a.date.compareTo(b.date));
+
+    // Her bir işlem için ayrı veri noktası oluşturalım
+    final chartPoints = <ChartDataPoint>[];
+
+    for (var transaction in sortedTransactions) {
+      // İşlemin değerini hesapla (fiyat * miktar)
+      final transactionValue = transaction.price * transaction.quantity;
+
+      // Veri noktasını ekle
+      chartPoints.add(ChartDataPoint(
+        date: DateTime(transaction.date.year, transaction.date.month, transaction.date.day),
+        value: transactionValue,
+      ));
+    }
+
+    // Eğer aynı gün için birden fazla işlem varsa ve bunları birleştirmek isteniyorsa
+    // Bu kısmı aktif edebilirsiniz. Şu an her işlem ayrı bir nokta olarak gösteriliyor.
+
+    // Aynı gün için veri noktalarını birleştir
+    final Map<String, ChartDataPoint> uniquePoints = {};
+
+    for (var point in chartPoints) {
+      final dateKey = DateFormat('yyyy-MM-dd').format(point.date);
+
+      if (uniquePoints.containsKey(dateKey)) {
+        // Aynı gün için mevcut değere ekle
+        uniquePoints[dateKey] = ChartDataPoint(
+          date: point.date,
+          value: uniquePoints[dateKey]!.value + point.value,
+        );
+      } else {
+        // Yeni bir gün için veri noktası ekle
+        uniquePoints[dateKey] = point;
+      }
+    }
+
+    // Map'i listeye dönüştür
+    final result = uniquePoints.values.toList()..sort((a, b) => a.date.compareTo(b.date));
+
+    return result;
   }
 
-  // Tarih aralığına göre uygun aralık hesapla
-  int _calculateInterval(int daysBetween) {
-    if (daysBetween <= 14) return 1; // Günlük
-    if (daysBetween <= 60) return 5; // 5 günlük
-    if (daysBetween <= 180) return 15; // 15 günlük
-    if (daysBetween <= 365) return 30; // Aylık
-    return 90; // 3 aylık
-  }
-
+  /// Format date for display
   String formatDisplayDate(DateTime date) {
     return DateFormat('dd/MM').format(date);
   }
+
+  /// Import sample data from a JSON asset file
+  Future<void> importSampleData(BuildContext context, String assetPath) async {
+    if (_isImporting) return;
+
+    _isImporting = true;
+    notifyListeners();
+
+    await executeAsync(() async {
+      await _dataService.importSampleData(assetPath);
+      await fetchStocksWithTransactions();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.green,
+            content: Text('Sample data imported successfully!'),
+          ),
+        );
+      }
+
+      return null;
+    }, errorPrefix: "Failed to import sample data");
+
+    _isImporting = false;
+    notifyListeners();
+  }
 }
-// Updated on 2025-01-06 - add authentication module
-// Updated on 2025-01-13 - implement dark mode support
-// Updated on 2025-01-14 - create data caching mechanism
-// Updated on 2025-01-15 - add search functionality
-// Updated on 2025-01-15 - refine color scheme
-// Updated on 2025-01-16 - optimize image loading
-// Updated on 2025-01-20 - add navigation structure
-// Updated on 2025-01-28 - implement dark mode support
-// Updated on 2025-01-29 - resolve null pointer exceptions
-// Updated on 2025-02-03 - optimize image loading
-// Updated on 2025-02-04 - improve loading indicator
-// Updated on 2025-02-06 - simplify API integration
-// Updated on 2025-02-12 - add user preferences storage
-// Updated on 2025-02-17 - add portfolio summary view
-// Updated on 2025-02-24 - implement user profile screen
-// Updated on 2025-02-25 - resolve authentication token expiry
-// Updated on 2025-02-26 - resolve null pointer exceptions
-// Updated on 2025-02-27 - implement chart visualization
-// Updated on 2025-02-28 - improve error handling structure
-// Updated on 2025-03-05 - refine animation transitions
-// Updated on 2025-03-07 - setup firebase configuration
-// Updated on 2025-03-09 - improve error handling structure
-// Updated on 2025-03-13 - improve button styling
-// Updated on 2025-03-16 - correct sorting algorithm
-// Updated on 2025-03-18 - add portfolio analysis module
-// Updated on 2025-03-19 - address memory leaks

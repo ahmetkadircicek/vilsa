@@ -1,39 +1,45 @@
-import 'package:vilsa/features/add_stock/model/stock_model.dart';
+import 'package:vilsa/features/stock/model/stock_model.dart';
 
+/// Model representing a stock transaction with associated information
 class TransactionModel {
-  final String id; // Transaction ID
-  final String stockId; // ID of the stock this transaction belongs to
-  final StockModel stock; // Reference to the stock model (not serialized)
-  final double price; // Transaction price
-  final int quantity; // Transaction quantity
-  final DateTime date; // Transaction date
-  final String note; // Transaction note
-  final DateTime createDate; // Creation date
-  final double dividends; // Dividends associated with this transaction
+  final String id;
+  final String stockId;
+  final String stockName;
+  final StockModel? stock; // Nullable to break circular dependency
+  final double price;
+  final int quantity;
+  final DateTime date;
+  final String note;
+  final DateTime createDate;
+  final double dividends;
 
   TransactionModel({
     required this.id,
     required this.stockId,
-    required this.stock,
+    this.stockName = '',
+    this.stock,
     required this.price,
     required this.quantity,
     required this.date,
-    required this.note,
+    this.note = '',
     required this.createDate,
     required this.dividends,
   });
 
-  // For Firebase JSON serialization
+  /// Converts this model to a map for Firebase storage
   Map<String, dynamic> toJson() {
     return {
       "id": id,
-      "stockId": stockId, // Store only the stock ID
-      "stock": {
-        "id": stock.id,
-        "name": stock.name,
-        "abbreviation": stock.abbreviation,
-        "dividends": stock.dividends,
-      }, // Include minimal stock info
+      "stockId": stockId,
+      "stockName": stockName,
+      "stock": stock != null
+          ? {
+              "id": stock!.id,
+              "name": stock!.name,
+              "abbreviation": stock!.abbreviation,
+              "dividends": stock!.dividends,
+            }
+          : null,
       "price": price,
       "quantity": quantity,
       "date": date.toIso8601String(),
@@ -43,44 +49,68 @@ class TransactionModel {
     };
   }
 
-  // For Firebase JSON deserialization
+  /// Creates a TransactionModel from a JSON map
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
-    // Create a stock model from the embedded stock data
-    StockModel stockModel;
+    // Create a stock model from the embedded stock data if available
+    StockModel? stockModel;
 
     if (json["stock"] is Map) {
       final stockJson = Map<String, dynamic>.from(json["stock"] as Map);
       stockModel = StockModel.fromJson(stockJson);
-    } else {
-      // Fallback if stock data is missing or malformed
-      stockModel = StockModel(
-        id: '',
-        name: 'Unknown Stock',
-        abbreviation: 'UNK',
-        dividends: 0.0,
-      );
     }
 
     // Use stockId from the JSON if available, otherwise use the stock's ID
-    final String stockId = json["stockId"] ?? stockModel.id;
+    final String stockId = json["stockId"] ?? (stockModel?.id ?? '');
+
+    // Use stockName or get it from the stock model
+    final String stockName = json["stockName"] ?? stockModel?.name ?? '';
+
+    // Get note field, handling both "note" and "notes" for backwards compatibility
+    final String note = json["note"] ?? json["notes"] ?? '';
+
+    // Handle price safely
+    double price = 0.0;
+    if (json["price"] is num) {
+      price = (json["price"] as num).toDouble();
+    } else if (json["price"] is String) {
+      price = double.tryParse(json["price"] as String) ?? 0.0;
+    }
+
+    // Handle quantity safely
+    int quantity = 0;
+    if (json["quantity"] is num) {
+      quantity = (json["quantity"] as num).toInt();
+    } else if (json["quantity"] is String) {
+      quantity = int.tryParse(json["quantity"] as String) ?? 0;
+    }
+
+    // Handle dividends safely
+    double dividends = 0.0;
+    if (json["dividends"] is num) {
+      dividends = (json["dividends"] as num).toDouble();
+    } else if (json["dividends"] is String) {
+      dividends = double.tryParse(json["dividends"] as String) ?? 0.0;
+    }
 
     return TransactionModel(
       id: json["id"] ?? '',
       stockId: stockId,
+      stockName: stockName,
       stock: stockModel,
-      price: (json["price"] is num) ? (json["price"] as num).toDouble() : 0.0,
-      quantity: json["quantity"] is int ? json["quantity"] as int : 0,
+      price: price,
+      quantity: quantity,
       date: json["date"] != null ? DateTime.parse(json["date"]) : DateTime.now(),
-      note: json["note"] ?? '',
+      note: note,
       createDate: json["createDate"] != null ? DateTime.parse(json["createDate"]) : DateTime.now(),
-      dividends: (json["dividends"] is num) ? (json["dividends"] as num).toDouble() : 0.0,
+      dividends: dividends,
     );
   }
 
-  // Create a copy of this transaction with updated fields
+  /// Creates a copy of this model with optional updated values
   TransactionModel copyWith({
     String? id,
     String? stockId,
+    String? stockName,
     StockModel? stock,
     double? price,
     int? quantity,
@@ -92,6 +122,7 @@ class TransactionModel {
     return TransactionModel(
       id: id ?? this.id,
       stockId: stockId ?? this.stockId,
+      stockName: stockName ?? this.stockName,
       stock: stock ?? this.stock,
       price: price ?? this.price,
       quantity: quantity ?? this.quantity,
@@ -101,14 +132,7 @@ class TransactionModel {
       dividends: dividends ?? this.dividends,
     );
   }
+
+  /// Calculate the total cost of this transaction
+  double get totalCost => price * quantity;
 }
-// Updated on 2025-01-10 - correct sorting algorithm
-// Updated on 2025-02-02 - enhance performance of list rendering
-// Updated on 2025-02-03 - simplify API integration
-// Updated on 2025-02-05 - address network timeout handling
-// Updated on 2025-02-06 - setup firebase configuration
-// Updated on 2025-02-14 - add stock detail screen
-// Updated on 2025-02-21 - implement sorting options
-// Updated on 2025-02-25 - correct date formatting issues
-// Updated on 2025-03-05 - implement filtering options
-// Updated on 2025-03-10 - create data caching mechanism

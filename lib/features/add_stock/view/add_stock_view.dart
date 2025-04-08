@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:vilsa/core/components/general_button.dart';
 import 'package:vilsa/core/components/general_text.dart';
@@ -19,7 +18,6 @@ class AddStockView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Set up edit mode if stock is provided
     if (stock != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Provider.of<StockViewModel>(context, listen: false).setupForEdit(stock!);
@@ -44,7 +42,6 @@ class AddStockView extends StatelessWidget {
       leading: IconButton(
         icon: Icon(Icons.chevron_left, color: context.onPrimary),
         onPressed: () {
-          // Clear edit state before popping
           Provider.of<StockViewModel>(context, listen: false).clearEditState();
           Navigator.pop(context);
         },

@@ -1,28 +1,6 @@
 import 'dart:async';
 
-/// Farklı event türleri için tanımlama
-enum EventType {
-  /// Transaction added event
-  transactionAdded,
-
-  /// Transaction updated event
-  transactionUpdated,
-
-  /// Transaction deleted event
-  transactionDeleted,
-
-  /// Stock added event
-  stockAdded,
-
-  /// Stock updated event
-  stockUpdated,
-
-  /// Stock deleted event
-  stockDeleted,
-
-  /// Data refreshed event (general purpose)
-  dataRefreshed,
-}
+import 'package:vilsa/core/init/event/event_type_enum.dart';
 
 /// Event veri yapısı
 class AppEvent {

@@ -1,0 +1,4 @@
+enum ChartTypeEnum {
+  daily,
+  total,
+}

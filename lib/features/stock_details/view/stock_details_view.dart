@@ -186,7 +186,12 @@ class _StockDetailsViewState extends State<StockDetailsView> {
     }
 
     return ChartSectionContainer(
-      title: "Fiyat Grafiği",
+      title: Label(
+        text: "Fiyat Grafiği",
+        isBold: true,
+        fontSize: 14,
+        color: context.primary,
+      ),
       chart: LineChart(
         LineChartData(
           lineTouchData: LineTouchData(
@@ -325,7 +330,12 @@ class _StockDetailsViewState extends State<StockDetailsView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionWithRows(
-          title: "Portföy Bilgileri",
+          title: Label(
+            text: "Portföy Bilgileri",
+            isBold: true,
+            fontSize: 14,
+            color: context.primary,
+          ),
           rows: [
             {"Toplam Maliyet": "₺${totalCost.toStringAsFixed(2)}"},
             if (totalShares > 0) {"Ortalama Maliyet": "₺${averageCost.toStringAsFixed(2)} / adet"},
@@ -335,7 +345,12 @@ class _StockDetailsViewState extends State<StockDetailsView> {
 
         // Temettü Bilgileri Container
         SectionWithRows(
-          title: "Temettü Bilgileri",
+          title: Label(
+            text: "Temettü Bilgileri",
+            isBold: true,
+            fontSize: 14,
+            color: context.primary,
+          ),
           rows: [
             {"Toplam Temettü": "₺${totalDividends.toStringAsFixed(2)}"},
             {"Temettü Verimi": "%${dividendYield.toStringAsFixed(2)}"},
@@ -351,7 +366,12 @@ class _StockDetailsViewState extends State<StockDetailsView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionContainer(
-          title: "İşlemler",
+          title: Label(
+            text: "İşlemler",
+            isBold: true,
+            fontSize: 14,
+            color: context.primary,
+          ),
           headerColor: context.primary.withValues(alpha: 0.1),
           content: ListView.builder(
             shrinkWrap: true,

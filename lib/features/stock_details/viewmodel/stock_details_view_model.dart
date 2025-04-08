@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:intl/intl.dart';
 import 'package:vilsa/core/base/base_view_model.dart';
 import 'package:vilsa/core/init/event/event_bus.dart';
+import 'package:vilsa/core/init/event/event_type_enum.dart';
 import 'package:vilsa/core/init/network/stock_service.dart';
 import 'package:vilsa/core/init/network/transaction_service.dart';
 import 'package:vilsa/features/add_transaction/model/transaction_model.dart';

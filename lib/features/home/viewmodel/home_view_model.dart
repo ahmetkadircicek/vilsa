@@ -1,52 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:vilsa/core/base/base_view_model.dart';
+import 'package:vilsa/core/init/event/event_bus.dart';
+import 'package:vilsa/core/init/event/event_type_enum.dart';
 import 'package:vilsa/core/init/network/data_service.dart';
 import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
 import 'package:vilsa/features/home/model/chart_data_point_model.dart';
+import 'package:vilsa/core/enums/chart_display_mode_enum.dart';
+import 'package:vilsa/core/enums/chart_type_enum.dart';
+import 'package:vilsa/core/enums/stock_filter_type_enum.dart';
+import 'package:vilsa/core/enums/stock_sort_type_enum.dart';
 import 'package:vilsa/features/stock/model/stock_model.dart';
-
-/// Grafik gösterme modları
-enum ChartDisplayMode {
-  /// Günlük değerleri gösterir (her işlem ayrı noktadır)
-  daily,
-
-  /// Birikimli değerleri gösterir (her işlem önceki değerlerin üzerine eklenir)
-  total,
-}
-
-/// Grafik türleri
-enum ChartType {
-  daily,
-  total,
-}
-
-/// Hisse filtreleme durumları
-enum StockFilterType {
-  /// Tüm hisseleri gösterir
-  all,
-
-  /// Sadece işlem yapılan hisseleri gösterir
-  traded,
-
-  /// Sadece işlem yapılmayan hisseleri gösterir
-  untraded,
-}
-
-/// Hisse sıralama türleri
-enum StockSortType {
-  /// Alfabetik sıralama
-  alphabetical,
-
-  /// Toplam adet sıralama
-  quantity,
-
-  /// Toplam değer sıralama
-  totalValue,
-
-  /// Ortalama alış fiyatı sıralama
-  averagePrice,
-}
 
 /// ViewModel to manage home screen data and operations
 class HomeViewModel extends BaseViewModel {
@@ -54,37 +18,28 @@ class HomeViewModel extends BaseViewModel {
 
   List<StockModel> _stocks = [];
   List<TransactionModel> _allTransactions = [];
+  TextEditingController searchController = TextEditingController(); // Search controller
 
   // Default date range: one year ago to today
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 365 * 2));
   DateTime _endDate = DateTime.now();
 
-  bool _isImporting = false;
-
-  // Default chart display mode
-  ChartDisplayMode _chartDisplayMode = ChartDisplayMode.daily;
-
-  // Default chart type
-  ChartType _chartType = ChartType.daily;
-
-  // Default stock filter type
-  StockFilterType _stockFilterType = StockFilterType.all;
-
-  // Default stock sort type
-  StockSortType _stockSortType = StockSortType.alphabetical;
+  ChartDisplayModeEnum _chartDisplayMode = ChartDisplayModeEnum.daily;
+  ChartTypeEnum _chartType = ChartTypeEnum.daily;
+  StockFilterTypeEnum _stockFilterType = StockFilterTypeEnum.all;
+  StockSortTypeEnum _stockSortType = StockSortTypeEnum.alphabetical;
 
   List<StockModel> get stocks => _stocks;
   List<TransactionModel> get allTransactions => _allTransactions;
   DateTime get startDate => _startDate;
   DateTime get endDate => _endDate;
-  bool get isImporting => _isImporting;
-  ChartDisplayMode get chartDisplayMode => _chartDisplayMode;
-  ChartType get chartType => _chartType;
-  StockFilterType get stockFilterType => _stockFilterType;
-  StockSortType get stockSortType => _stockSortType;
+  ChartDisplayModeEnum get chartDisplayMode => _chartDisplayMode;
+  ChartTypeEnum get chartType => _chartType;
+  StockFilterTypeEnum get stockFilterType => _stockFilterType;
+  StockSortTypeEnum get stockSortType => _stockSortType;
 
   /// Grafik gösterim modunu değiştir
-  void setChartDisplayMode(ChartDisplayMode mode) {
+  void setChartDisplayMode(ChartDisplayModeEnum mode) {
     if (_chartDisplayMode != mode) {
       _chartDisplayMode = mode;
       notifyListeners();
@@ -92,7 +47,7 @@ class HomeViewModel extends BaseViewModel {
   }
 
   /// Grafik türünü değiştir
-  void setChartType(ChartType type) {
+  void setChartType(ChartTypeEnum type) {
     _chartType = type;
     notifyListeners();
   }
@@ -104,6 +59,24 @@ class HomeViewModel extends BaseViewModel {
 
   HomeViewModel() {
     init();
+    searchController.addListener(_onSearchChanged);
+
+    // Listen for stock events
+    EventBus.instance.on(EventType.stockAdded).listen((_) {
+      fetchStocksWithTransactions();
+    });
+
+    EventBus.instance.on(EventType.stockUpdated).listen((_) {
+      fetchStocksWithTransactions();
+    });
+
+    EventBus.instance.on(EventType.stockDeleted).listen((_) {
+      fetchStocksWithTransactions();
+    });
+  }
+
+  void _onSearchChanged() {
+    notifyListeners();
   }
 
   /// Initialize the ViewModel by fetching data
@@ -279,7 +252,7 @@ class HomeViewModel extends BaseViewModel {
       // İşlemin değerini hesapla (fiyat * miktar)
       final transactionValue = transaction.price * transaction.quantity;
 
-      if (_chartType == ChartType.total) {
+      if (_chartType == ChartTypeEnum.total) {
         // Toplam moda göre, her işlem değeri önceki toplama eklenir
         runningTotal += transactionValue;
 
@@ -306,42 +279,52 @@ class HomeViewModel extends BaseViewModel {
   }
 
   /// Hisse filtreleme türünü değiştir
-  void setStockFilterType(StockFilterType type) {
+  void setStockFilterType(StockFilterTypeEnum type) {
     _stockFilterType = type;
     notifyListeners();
   }
 
   /// Hisse sıralama türünü değiştir
-  void setStockSortType(StockSortType type) {
+  void setStockSortType(StockSortTypeEnum type) {
     _stockSortType = type;
     notifyListeners();
   }
 
   /// Get filtered and sorted stocks
   List<StockModel> get filteredStocks {
-    // Önce filtreleme yap
+    // Önce arama filtresini uygula
+    List<StockModel> searchFiltered = _stocks;
+
+    if (searchController.text.isNotEmpty) {
+      final searchTerm = searchController.text.toLowerCase();
+      searchFiltered = _stocks.where((stock) {
+        return stock.name.toLowerCase().contains(searchTerm) || stock.abbreviation.toLowerCase().contains(searchTerm);
+      }).toList();
+    }
+
+    // Sonra tür filtrelemesi yap
     List<StockModel> filtered = switch (_stockFilterType) {
-      StockFilterType.traded => _stocks.where((stock) => stock.transactions.isNotEmpty).toList(),
-      StockFilterType.untraded => _stocks.where((stock) => stock.transactions.isEmpty).toList(),
-      StockFilterType.all => _stocks,
+      StockFilterTypeEnum.traded => searchFiltered.where((stock) => stock.transactions.isNotEmpty).toList(),
+      StockFilterTypeEnum.untraded => searchFiltered.where((stock) => stock.transactions.isEmpty).toList(),
+      StockFilterTypeEnum.all => searchFiltered,
     };
 
     // Sonra sıralama yap
     filtered.sort((a, b) {
       switch (_stockSortType) {
-        case StockSortType.alphabetical:
+        case StockSortTypeEnum.alphabetical:
           return a.name.compareTo(b.name);
-        case StockSortType.quantity:
+        case StockSortTypeEnum.quantity:
           int quantityA = a.transactions.fold(0, (sum, tx) => sum + tx.quantity);
           int quantityB = b.transactions.fold(0, (sum, tx) => sum + tx.quantity);
           return quantityB.compareTo(quantityA); // Büyükten küçüğe
-        case StockSortType.totalValue:
+        case StockSortTypeEnum.totalValue:
           int quantityA = a.transactions.fold(0, (sum, tx) => sum + tx.quantity);
           int quantityB = b.transactions.fold(0, (sum, tx) => sum + tx.quantity);
           double valueA = quantityA * a.currentPrice;
           double valueB = quantityB * b.currentPrice;
           return valueB.compareTo(valueA); // Büyükten küçüğe
-        case StockSortType.averagePrice:
+        case StockSortTypeEnum.averagePrice:
           double avgPriceA = a.transactions.isEmpty
               ? 0
               : a.transactions.fold(0.0, (sum, tx) => sum + tx.price) / a.transactions.length;
@@ -358,5 +341,12 @@ class HomeViewModel extends BaseViewModel {
   /// Immediately refresh the stocks list without a full fetch - useful after deletion
   void refreshStocksList() {
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    searchController.removeListener(_onSearchChanged);
+    searchController.dispose();
+    super.dispose();
   }
 }

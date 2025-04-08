@@ -6,7 +6,7 @@ import 'package:vilsa/core/extensions/context_extension.dart';
 /// Tüm sayfalarda tutarlı bir şekilde kullanılabilen bölüm container'ı
 /// Başlık ve içerik alanlarından oluşur
 class SectionContainer extends StatefulWidget {
-  final String title;
+  final Widget title; // Changed from String to Widget
   final Widget content;
   final Widget? trailing;
   final EdgeInsets contentPadding;
@@ -108,12 +108,7 @@ class _SectionContainerState extends State<SectionContainer> with SingleTickerPr
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Label(
-                      text: widget.title,
-                      isBold: true,
-                      fontSize: 14,
-                      color: context.primary,
-                    ),
+                    widget.title, // Updated to use the Widget title
                     if (widget.trailing != null) widget.trailing!,
                   ],
                 ),
@@ -134,7 +129,7 @@ class _SectionContainerState extends State<SectionContainer> with SingleTickerPr
 
 /// İçinde satır bileşeni olan section container versiyonu
 class SectionWithRows extends StatefulWidget {
-  final String title;
+  final Widget title; // Changed from String to Widget
   final List<Map<String, String>> rows;
   final Widget? trailing;
   final EdgeInsets contentPadding;
@@ -202,7 +197,7 @@ class _SectionWithRowsState extends State<SectionWithRows> with SingleTickerProv
       child: SlideTransition(
         position: _slideAnimation,
         child: SectionContainer(
-          title: widget.title,
+          title: widget.title, // Updated to use the Widget title
           trailing: widget.trailing,
           contentPadding: widget.contentPadding,
           showShadow: widget.showShadow,
@@ -238,7 +233,7 @@ class _SectionWithRowsState extends State<SectionWithRows> with SingleTickerProv
 
 /// Grafik bileşenini içeren section container versiyonu
 class ChartSectionContainer extends StatefulWidget {
-  final String title;
+  final Widget title; // Changed from String to Widget
   final Widget chart;
   final Widget? trailing;
   final double height;
@@ -308,7 +303,7 @@ class _ChartSectionContainerState extends State<ChartSectionContainer> with Sing
       child: SlideTransition(
         position: _slideAnimation,
         child: SectionContainer(
-          title: widget.title,
+          title: widget.title, // Updated to use the Widget title
           trailing: widget.trailing,
           contentPadding: widget.contentPadding,
           showShadow: widget.showShadow,

@@ -1,0 +1,4 @@
+enum ChartDisplayModeEnum {
+  daily,
+  total,
+}

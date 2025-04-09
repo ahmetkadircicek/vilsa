@@ -8,12 +8,48 @@ import 'package:vilsa/core/constants/general_constants.dart';
 import 'package:vilsa/core/constants/padding_constants.dart';
 import 'package:vilsa/core/extensions/context_extension.dart';
 import 'package:vilsa/core/extensions/price_input_formatter.dart';
+import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
 import 'package:vilsa/features/add_transaction/viewmodel/add_transaction_view_model.dart';
 import 'package:vilsa/features/stock/model/stock_model.dart';
 
-class AddTransactionView extends StatelessWidget {
+class AddTransactionView extends StatefulWidget {
   final StockModel stock;
-  const AddTransactionView({super.key, required this.stock});
+  final TransactionModel? transaction;
+
+  const AddTransactionView({
+    super.key,
+    required this.stock,
+    this.transaction,
+  });
+
+  @override
+  State<AddTransactionView> createState() => _AddTransactionViewState();
+}
+
+class _AddTransactionViewState extends State<AddTransactionView> {
+  late AddTransactionViewModel viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    viewModel = Provider.of<AddTransactionViewModel>(context, listen: false);
+
+    // Eğer düzenleme modundaysak form alanlarını doldur
+    if (widget.transaction != null) {
+      final transaction = widget.transaction!;
+      viewModel.priceController.text = transaction.price.toString();
+      viewModel.quantityController.text = transaction.quantity.toString();
+      viewModel.dividendsController.text = transaction.dividends > 0 ? transaction.dividends.toString() : '';
+      viewModel.noteController.text = transaction.note;
+
+      // Build tamamlandıktan sonra setSelectedDate çağrılsın
+      Future.microtask(() {
+        viewModel.setSelectedDate(transaction.date);
+      });
+
+      viewModel.stockId = transaction.stockId;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +58,12 @@ class AddTransactionView extends StatelessWidget {
       body: Consumer<AddTransactionViewModel>(
         builder: (context, viewModel, child) {
           return SafeArea(
-            child: _buildAddForm(viewModel, context),
+            child: Column(
+              children: [
+                Expanded(child: SingleChildScrollView(child: _buildAddForm(viewModel, context))),
+                _buildButton(context, viewModel),
+              ],
+            ),
           );
         },
       ),
@@ -36,47 +77,56 @@ class AddTransactionView extends StatelessWidget {
         icon: Icon(Icons.chevron_left, color: context.onPrimary),
         onPressed: () {
           Navigator.pop(context);
+          viewModel.resetForm();
         },
       ),
-      title: const Highlight(text: 'Ekle', color: Colors.white),
+      title: Highlight(text: widget.transaction != null ? 'Düzenle' : 'Ekle', color: Colors.white),
     );
   }
 
   Widget _buildAddForm(AddTransactionViewModel viewModel, BuildContext context) {
-    return Column(
-      children: [
-        _buildBalanceSection(context),
-        Padding(
-          padding: PaddingConstants.symmetricHorizontalMedium + PaddingConstants.onlyTopMedium,
-          child: Column(
-            spacing: 16,
-            children: [
-              _buildDateRangePicker(context, viewModel),
-              _buildPriceField(viewModel, context),
-              _buildQuantityField(viewModel, context),
-              _buildDividendsField(viewModel, context),
-              _buildNoteField(viewModel, context),
-            ],
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          _buildBalanceSection(context),
+          Padding(
+            padding: PaddingConstants.symmetricHorizontalMedium + PaddingConstants.onlyTopMedium,
+            child: Column(
+              spacing: 16,
+              children: [
+                _buildDateRangePicker(context, viewModel),
+                _buildPriceField(viewModel, context),
+                _buildQuantityField(viewModel, context),
+                _buildDividendsField(viewModel, context),
+                _buildNoteField(viewModel, context),
+              ],
+            ),
           ),
-        ),
-        Spacer(),
-        _buildButton(context, viewModel),
-      ],
+          // Button için boş alan bırak
+          SizedBox(height: 80),
+        ],
+      ),
     );
   }
 
   Widget _buildButton(BuildContext context, AddTransactionViewModel viewModel) {
-    return Padding(
-      padding: PaddingConstants.symmetricHorizontalMedium + PaddingConstants.onlyBottomMedium,
+    return Container(
+      color: context.onPrimary,
+      padding: PaddingConstants.symmetricHorizontalMedium +
+          PaddingConstants.onlyBottomMedium +
+          PaddingConstants.onlyTopSmall,
       child: GeneralButton(
         onPressed: () async {
-          final transaction = await viewModel.sendData(stock, context: context);
+          final transaction = await viewModel.sendData(
+            widget.stock,
+            context: context,
+            existingTransaction: widget.transaction,
+          );
 
-          if (transaction != null) {
-            Navigator.pop(context);
-          }
+          // İşlem başarılı olduğunda sayfadan çıkma işlemi viewModel içinde yapılıyor
+          // Dialog gösterilip otomatik kapandıktan sonra
         },
-        text: 'Ekle',
+        text: widget.transaction != null ? 'Güncelle' : 'Ekle',
         textColor: context.onPrimary,
         backgroundColor: context.primary,
       ),
@@ -124,13 +174,13 @@ class AddTransactionView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Helper(
-                  text: stock.name,
+                  text: widget.stock.name,
                   color: context.surface,
                   isBold: true,
                   overflow: true,
                 ),
                 Label(
-                  text: stock.abbreviation,
+                  text: widget.stock.abbreviation,
                   overflow: true,
                   color: context.surface.withValues(alpha: 0.8),
                 ),
@@ -147,7 +197,7 @@ class AddTransactionView extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.onPrimary,
         borderRadius: GeneralConstants.instance.borderRadius,
-        border: Border.all(color: context.secondary.withOpacity(0.2)),
+        border: Border.all(color: context.secondary.withValues(alpha: 0.2)),
       ),
       padding: PaddingConstants.allSmall,
       child: Row(
@@ -159,17 +209,15 @@ class AddTransactionView extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: context.primary.withOpacity(0.1),
+                color: context.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
-                  Text(
-                    DateFormat('dd/MM/yyyy').format(viewModel.selectedDate ?? DateTime.now()),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: context.onSurface,
-                    ),
+                  Content(
+                    text: DateFormat('dd/MM/yyyy').format(viewModel.selectedDate),
+                    color: context.onSurface,
+                    fontSize: 14,
                   ),
                   SizedBox(width: 4),
                   Icon(Icons.calendar_today, size: 16, color: context.primary),
@@ -187,7 +235,7 @@ class AddTransactionView extends StatelessWidget {
       context: context,
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
-      initialDate: viewModel.selectedDate ?? DateTime.now(),
+      initialDate: viewModel.selectedDate,
     );
 
     if (newDate != null) {
@@ -199,6 +247,7 @@ class AddTransactionView extends StatelessWidget {
     return TextField(
       inputFormatters: [CurrencyInputFormatter()],
       controller: viewModel.priceController,
+      keyboardType: TextInputType.number,
       decoration: InputDecoration(
         hintText: 'Alış fiyatını girin',
         hintStyle: GoogleFonts.montserrat(
@@ -217,6 +266,7 @@ class AddTransactionView extends StatelessWidget {
   Widget _buildQuantityField(AddTransactionViewModel viewModel, BuildContext context) {
     return TextField(
       controller: viewModel.quantityController,
+      keyboardType: TextInputType.number,
       decoration: InputDecoration(
         hintText: 'Adet girin',
         hintStyle: GoogleFonts.montserrat(
@@ -236,6 +286,7 @@ class AddTransactionView extends StatelessWidget {
     return TextField(
       inputFormatters: [CurrencyInputFormatter()],
       controller: viewModel.dividendsController,
+      keyboardType: TextInputType.number,
       decoration: InputDecoration(
         hintText: 'Temettü tutarını girin (opsiyonel)',
         hintStyle: GoogleFonts.montserrat(
@@ -269,8 +320,3 @@ class AddTransactionView extends StatelessWidget {
     );
   }
 }
-// Updated on 2025-01-10 - correct sorting algorithm
-// Updated on 2025-02-02 - enhance performance of list rendering
-// Updated on 2025-02-14 - add stock detail screen
-// Updated on 2025-02-21 - implement sorting options
-// Updated on 2025-03-05 - implement filtering options

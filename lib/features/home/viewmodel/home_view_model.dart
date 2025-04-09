@@ -6,6 +6,48 @@ import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
 import 'package:vilsa/features/home/model/chart_data_point_model.dart';
 import 'package:vilsa/features/stock/model/stock_model.dart';
 
+/// Grafik gösterme modları
+enum ChartDisplayMode {
+  /// Günlük değerleri gösterir (her işlem ayrı noktadır)
+  daily,
+
+  /// Birikimli değerleri gösterir (her işlem önceki değerlerin üzerine eklenir)
+  total,
+}
+
+/// Grafik türleri
+enum ChartType {
+  daily,
+  total,
+}
+
+/// Hisse filtreleme durumları
+enum StockFilterType {
+  /// Tüm hisseleri gösterir
+  all,
+
+  /// Sadece işlem yapılan hisseleri gösterir
+  traded,
+
+  /// Sadece işlem yapılmayan hisseleri gösterir
+  untraded,
+}
+
+/// Hisse sıralama türleri
+enum StockSortType {
+  /// Alfabetik sıralama
+  alphabetical,
+
+  /// Toplam adet sıralama
+  quantity,
+
+  /// Toplam değer sıralama
+  totalValue,
+
+  /// Ortalama alış fiyatı sıralama
+  averagePrice,
+}
+
 /// ViewModel to manage home screen data and operations
 class HomeViewModel extends BaseViewModel {
   final DataService _dataService = DataService.instance;
@@ -14,16 +56,46 @@ class HomeViewModel extends BaseViewModel {
   List<TransactionModel> _allTransactions = [];
 
   // Default date range: one year ago to today
-  DateTime _startDate = DateTime.now().subtract(const Duration(days: 365));
+  DateTime _startDate = DateTime.now().subtract(const Duration(days: 365 * 2));
   DateTime _endDate = DateTime.now();
 
   bool _isImporting = false;
+
+  // Default chart display mode
+  ChartDisplayMode _chartDisplayMode = ChartDisplayMode.daily;
+
+  // Default chart type
+  ChartType _chartType = ChartType.daily;
+
+  // Default stock filter type
+  StockFilterType _stockFilterType = StockFilterType.all;
+
+  // Default stock sort type
+  StockSortType _stockSortType = StockSortType.alphabetical;
 
   List<StockModel> get stocks => _stocks;
   List<TransactionModel> get allTransactions => _allTransactions;
   DateTime get startDate => _startDate;
   DateTime get endDate => _endDate;
   bool get isImporting => _isImporting;
+  ChartDisplayMode get chartDisplayMode => _chartDisplayMode;
+  ChartType get chartType => _chartType;
+  StockFilterType get stockFilterType => _stockFilterType;
+  StockSortType get stockSortType => _stockSortType;
+
+  /// Grafik gösterim modunu değiştir
+  void setChartDisplayMode(ChartDisplayMode mode) {
+    if (_chartDisplayMode != mode) {
+      _chartDisplayMode = mode;
+      notifyListeners();
+    }
+  }
+
+  /// Grafik türünü değiştir
+  void setChartType(ChartType type) {
+    _chartType = type;
+    notifyListeners();
+  }
 
   /// Load portfolio data including stocks and transactions
   Future<void> loadPortfolioData() async {
@@ -54,6 +126,14 @@ class HomeViewModel extends BaseViewModel {
     }, errorPrefix: "Failed to fetch stocks with transactions");
   }
 
+  /// Fetch all stocks with their transactions
+  Future<void> fetchStocks() async {
+    await executeAsync(() async {
+      _stocks = await _dataService.fetchStocksWithTransactions();
+      return _stocks;
+    }, errorPrefix: "Failed to fetch stocks");
+  }
+
   /// Get transactions filtered by the selected date range
   List<TransactionModel> get filteredTransactions {
     return _allTransactions.where((transaction) {
@@ -70,9 +150,20 @@ class HomeViewModel extends BaseViewModel {
 
   /// Calculate the total dividends from filtered transactions
   double get totalDividends {
-    return filteredTransactions.fold(0.0, (total, transaction) {
+    // İşlemlerdeki temettüleri topla
+    double transactionDividends = filteredTransactions.fold(0.0, (total, transaction) {
       return total + transaction.dividends;
     });
+
+    // Hisse temettülerini topla
+    double stockDividends = _stocks.fold(0.0, (total, stock) {
+      // Her hisse için toplam adet hesapla
+      int totalQuantity = stock.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+      // Adet başına temettü ile toplam adet çarpımını ekle
+      return total + (stock.dividends * totalQuantity);
+    });
+
+    return transactionDividends + stockDividends;
   }
 
   /// Get the total investment amount (sum of buy transactions)
@@ -182,42 +273,31 @@ class HomeViewModel extends BaseViewModel {
     // Her bir işlem için ayrı veri noktası oluşturalım
     final chartPoints = <ChartDataPoint>[];
 
+    double runningTotal = 0.0; // Birikimli toplam için
+
     for (var transaction in sortedTransactions) {
       // İşlemin değerini hesapla (fiyat * miktar)
       final transactionValue = transaction.price * transaction.quantity;
 
-      // Veri noktasını ekle
-      chartPoints.add(ChartDataPoint(
-        date: DateTime(transaction.date.year, transaction.date.month, transaction.date.day),
-        value: transactionValue,
-      ));
-    }
+      if (_chartType == ChartType.total) {
+        // Toplam moda göre, her işlem değeri önceki toplama eklenir
+        runningTotal += transactionValue;
 
-    // Eğer aynı gün için birden fazla işlem varsa ve bunları birleştirmek isteniyorsa
-    // Bu kısmı aktif edebilirsiniz. Şu an her işlem ayrı bir nokta olarak gösteriliyor.
-
-    // Aynı gün için veri noktalarını birleştir
-    final Map<String, ChartDataPoint> uniquePoints = {};
-
-    for (var point in chartPoints) {
-      final dateKey = DateFormat('yyyy-MM-dd').format(point.date);
-
-      if (uniquePoints.containsKey(dateKey)) {
-        // Aynı gün için mevcut değere ekle
-        uniquePoints[dateKey] = ChartDataPoint(
-          date: point.date,
-          value: uniquePoints[dateKey]!.value + point.value,
-        );
+        // Veri noktasını ekle
+        chartPoints.add(ChartDataPoint(
+          date: transaction.date,
+          value: runningTotal,
+        ));
       } else {
-        // Yeni bir gün için veri noktası ekle
-        uniquePoints[dateKey] = point;
+        // Günlük moda göre, her işlem ayrı bir nokta olarak eklenir
+        chartPoints.add(ChartDataPoint(
+          date: transaction.date,
+          value: transactionValue,
+        ));
       }
     }
 
-    // Map'i listeye dönüştür
-    final result = uniquePoints.values.toList()..sort((a, b) => a.date.compareTo(b.date));
-
-    return result;
+    return chartPoints;
   }
 
   /// Format date for display
@@ -225,30 +305,58 @@ class HomeViewModel extends BaseViewModel {
     return DateFormat('dd/MM').format(date);
   }
 
-  /// Import sample data from a JSON asset file
-  Future<void> importSampleData(BuildContext context, String assetPath) async {
-    if (_isImporting) return;
-
-    _isImporting = true;
+  /// Hisse filtreleme türünü değiştir
+  void setStockFilterType(StockFilterType type) {
+    _stockFilterType = type;
     notifyListeners();
+  }
 
-    await executeAsync(() async {
-      await _dataService.importSampleData(assetPath);
-      await fetchStocksWithTransactions();
+  /// Hisse sıralama türünü değiştir
+  void setStockSortType(StockSortType type) {
+    _stockSortType = type;
+    notifyListeners();
+  }
 
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.green,
-            content: Text('Sample data imported successfully!'),
-          ),
-        );
+  /// Get filtered and sorted stocks
+  List<StockModel> get filteredStocks {
+    // Önce filtreleme yap
+    List<StockModel> filtered = switch (_stockFilterType) {
+      StockFilterType.traded => _stocks.where((stock) => stock.transactions.isNotEmpty).toList(),
+      StockFilterType.untraded => _stocks.where((stock) => stock.transactions.isEmpty).toList(),
+      StockFilterType.all => _stocks,
+    };
+
+    // Sonra sıralama yap
+    filtered.sort((a, b) {
+      switch (_stockSortType) {
+        case StockSortType.alphabetical:
+          return a.name.compareTo(b.name);
+        case StockSortType.quantity:
+          int quantityA = a.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+          int quantityB = b.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+          return quantityB.compareTo(quantityA); // Büyükten küçüğe
+        case StockSortType.totalValue:
+          int quantityA = a.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+          int quantityB = b.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+          double valueA = quantityA * a.currentPrice;
+          double valueB = quantityB * b.currentPrice;
+          return valueB.compareTo(valueA); // Büyükten küçüğe
+        case StockSortType.averagePrice:
+          double avgPriceA = a.transactions.isEmpty
+              ? 0
+              : a.transactions.fold(0.0, (sum, tx) => sum + tx.price) / a.transactions.length;
+          double avgPriceB = b.transactions.isEmpty
+              ? 0
+              : b.transactions.fold(0.0, (sum, tx) => sum + tx.price) / b.transactions.length;
+          return avgPriceB.compareTo(avgPriceA); // Büyükten küçüğe
       }
+    });
 
-      return null;
-    }, errorPrefix: "Failed to import sample data");
+    return filtered;
+  }
 
-    _isImporting = false;
+  /// Immediately refresh the stocks list without a full fetch - useful after deletion
+  void refreshStocksList() {
     notifyListeners();
   }
 }

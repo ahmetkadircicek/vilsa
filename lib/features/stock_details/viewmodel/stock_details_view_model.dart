@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:intl/intl.dart';
 import 'package:vilsa/core/base/base_view_model.dart';
+import 'package:vilsa/core/init/event/event_bus.dart';
 import 'package:vilsa/core/init/network/stock_service.dart';
 import 'package:vilsa/core/init/network/transaction_service.dart';
 import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
@@ -9,18 +12,62 @@ import 'package:vilsa/features/stock/model/stock_model.dart';
 class StockDetailsViewModel extends BaseViewModel {
   final StockService _stockService = StockService.instance;
   final TransactionService _transactionService = TransactionService.instance;
+  final EventBus _eventBus = EventBus.instance;
+
+  // Event aboneliklerini takip etmek için
+  late StreamSubscription<AppEvent> _transactionAddedSubscription;
+  late StreamSubscription<AppEvent> _transactionUpdatedSubscription;
+  late StreamSubscription<AppEvent> _transactionDeletedSubscription;
 
   List<TransactionModel> _transactions = [];
-  DateTime _startDate = DateTime.now().subtract(const Duration(days: 365)); // Default to 1 year ago
+  DateTime _startDate = DateTime.now().subtract(const Duration(days: 365 * 2)); // Default to 1 year ago
   DateTime _endDate = DateTime.now(); // Default to today
   StockModel? _currentStock;
+  String? _currentStockId;
+  bool _hasLoadedTransactions = false; // Transaction yükleme durumu
 
   // Cache for expensive calculations
   List<TransactionModel>? _cachedFilteredTransactions;
   double? _cachedTotalCostPrice;
   double? _cachedTotalDividends;
   double? _cachedDividendYield;
+  double? _cachedAverageCostPerShare;
   List<Map<String, dynamic>>? _cachedChartData;
+
+  StockDetailsViewModel() {
+    _initializeEventListeners();
+  }
+
+  /// Olay dinleyicilerini başlatma
+  void _initializeEventListeners() {
+    _transactionAddedSubscription = _eventBus.on(EventType.transactionAdded).listen(_onTransactionEvent);
+    _transactionUpdatedSubscription = _eventBus.on(EventType.transactionUpdated).listen(_onTransactionEvent);
+    _transactionDeletedSubscription = _eventBus.on(EventType.transactionDeleted).listen(_onTransactionEvent);
+  }
+
+  /// İşlem olaylarını işleme
+  void _onTransactionEvent(AppEvent event) {
+    // Olay tipini ve veriyi logla
+    print("İşlem Olayı: ${event.type}, Veri: ${event.data.toString()}");
+
+    // Eğer aktif bir stok yoksa güncelleme yapmaya gerek yok
+    if (_currentStockId == null) {
+      print("Aktif bir stok bulunmadığı için işlem olayı işlenemiyor.");
+      return;
+    }
+
+    final TransactionModel transaction = event.data as TransactionModel;
+    print("İşlem StockId: ${transaction.stockId}, Mevcut StockId: $_currentStockId");
+
+    // Eğer bu işlem mevcut stoka aitse, verileri yenile
+    if (transaction.stockId == _currentStockId) {
+      print("İşlem bu stoka ait, veriler yenileniyor");
+      // Verileri yenile
+      fetchTransactions(_currentStockId!);
+    } else {
+      print("İşlem farklı bir stoka ait, veriler yenilenmiyor");
+    }
+  }
 
   // Invalidate cache when data changes
   void _invalidateCache() {
@@ -28,6 +75,7 @@ class StockDetailsViewModel extends BaseViewModel {
     _cachedTotalCostPrice = null;
     _cachedTotalDividends = null;
     _cachedDividendYield = null;
+    _cachedAverageCostPerShare = null;
     _cachedChartData = null;
   }
 
@@ -35,6 +83,7 @@ class StockDetailsViewModel extends BaseViewModel {
   DateTime get startDate => _startDate;
   DateTime get endDate => _endDate;
   StockModel? get currentStock => _currentStock;
+  bool get hasLoadedTransactions => _hasLoadedTransactions;
 
   /// Get transactions filtered by the selected date range
   List<TransactionModel> get filteredTransactions {
@@ -49,6 +98,8 @@ class StockDetailsViewModel extends BaseViewModel {
 
   /// Fetch transactions for a specific stock
   Future<void> fetchTransactions(String stockId) async {
+    _currentStockId = stockId;
+
     await executeAsync(() async {
       // First fetch the stock to get its details
       _currentStock = await _stockService.fetchById(stockId);
@@ -66,6 +117,11 @@ class StockDetailsViewModel extends BaseViewModel {
 
       // Invalidate cache when transactions change
       _invalidateCache();
+
+      // İşlemlerin yüklendiğini işaretle
+      _hasLoadedTransactions = true;
+
+      print("fetchTransactions: ${_transactions.length} işlem yüklendi (StockID: $stockId)");
 
       return _transactions;
     }, errorPrefix: "Failed to fetch transactions");
@@ -87,11 +143,56 @@ class StockDetailsViewModel extends BaseViewModel {
 
     double total = 0;
     for (var transaction in filteredTransactions) {
-      total += transaction.price * transaction.quantity;
+      if (transaction.type == TransactionType.buy) {
+        total += transaction.price * transaction.quantity;
+      } else if (transaction.type == TransactionType.sell) {
+        // Satışları maliyetten düşmüyoruz, çünkü ortalama maliyet hesabında net alım adedine bölünecek
+      }
     }
 
     _cachedTotalCostPrice = total;
     return total;
+  }
+
+  /// Calculate average cost per share
+  double calculateAverageCostPerShare() {
+    if (_cachedAverageCostPerShare != null) return _cachedAverageCostPerShare!;
+
+    double totalCost = 0;
+    int totalShares = 0;
+
+    for (var transaction in filteredTransactions) {
+      if (transaction.type == TransactionType.buy) {
+        totalCost += transaction.price * transaction.quantity;
+        totalShares += transaction.quantity;
+      } else if (transaction.type == TransactionType.sell) {
+        totalShares -= transaction.quantity;
+      }
+    }
+
+    // Eğer hiç hisse yoksa veya tüm hisseler satılmışsa ortalama maliyet gösterilmez
+    if (totalShares <= 0) {
+      _cachedAverageCostPerShare = 0;
+      return 0;
+    }
+
+    _cachedAverageCostPerShare = totalCost / totalShares;
+    return _cachedAverageCostPerShare!;
+  }
+
+  /// Get total shares count
+  int getTotalSharesCount() {
+    int totalShares = 0;
+
+    for (var transaction in filteredTransactions) {
+      if (transaction.type == TransactionType.buy) {
+        totalShares += transaction.quantity;
+      } else if (transaction.type == TransactionType.sell) {
+        totalShares -= transaction.quantity;
+      }
+    }
+
+    return totalShares < 0 ? 0 : totalShares;
   }
 
   /// Calculate total dividends for the filtered range
@@ -103,10 +204,11 @@ class StockDetailsViewModel extends BaseViewModel {
 
     // Get dividends from the stock itself and calculate based on the date range
     if (_currentStock != null) {
-      // Calculate months between start and end date
-      int months = (_endDate.difference(_startDate).inDays / 30).ceil();
-      // Assuming dividends are monthly, multiply by months (max 12 months per year)
-      double stockDividends = _currentStock!.dividends * (months > 12 ? 12 : months) / 12;
+      // Toplam hisse adedi
+      int totalQuantity = getTotalSharesCount();
+
+      // Adet başına temettü ile toplam adet çarpımı
+      double stockDividends = _currentStock!.dividends * totalQuantity;
 
       _cachedTotalDividends = transactionDividends + stockDividends;
       return _cachedTotalDividends!;
@@ -149,20 +251,36 @@ class StockDetailsViewModel extends BaseViewModel {
     _cachedChartData = chartData;
     return chartData;
   }
+
+  /// Delete a transaction by ID
+  Future<void> deleteTransaction(String transactionId) async {
+    await executeAsync(() async {
+      // Önce silinen işlemi al (olay yayınlamak için)
+      final transaction = _transactions.firstWhere((tx) => tx.id == transactionId);
+
+      // İşlemi veritabanından sil
+      await _transactionService.delete(transactionId);
+
+      // Yerel listeden de kaldır
+      _transactions.removeWhere((tx) => tx.id == transactionId);
+
+      // Önbelleği temizle
+      _invalidateCache();
+
+      // İşlem silindi olayını yayınla
+      _eventBus.fireEvent(EventType.transactionDeleted, data: transaction);
+
+      return true;
+    }, errorPrefix: "Failed to delete transaction");
+  }
+
+  @override
+  void dispose() {
+    // Abonelikleri iptal et
+    _transactionAddedSubscription.cancel();
+    _transactionUpdatedSubscription.cancel();
+    _transactionDeletedSubscription.cancel();
+
+    super.dispose();
+  }
 }
-// Updated on 2025-01-17 - resolve null pointer exceptions
-// Updated on 2025-01-20 - resolve authentication token expiry
-// Updated on 2025-01-31 - address UI alignment issues
-// Updated on 2025-02-13 - implement filtering options
-// Updated on 2025-02-14 - setup firebase configuration
-// Updated on 2025-02-18 - address UI alignment issues
-// Updated on 2025-02-20 - add transaction history page
-// Updated on 2025-02-22 - add portfolio analysis module
-// Updated on 2025-02-26 - add navigation structure
-// Updated on 2025-03-01 - correct date formatting issues
-// Updated on 2025-03-02 - add search functionality
-// Updated on 2025-03-04 - optimize data fetching logic
-// Updated on 2025-03-06 - add search functionality
-// Updated on 2025-03-10 - implement notification system
-// Updated on 2025-03-11 - add stock detail screen
-// Updated on 2025-03-12 - implement error handling

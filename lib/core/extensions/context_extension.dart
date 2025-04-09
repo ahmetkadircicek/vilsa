@@ -6,27 +6,26 @@ extension BuildContextExtension<T> on BuildContext {
   double get height => MediaQuery.of(this).size.height;
   Size get size => MediaQuery.of(this).size;
 
+  double get lowValue => height * 0.01;
+  double get normalValue => height * 0.02;
+  double get mediumValue => height * 0.04;
+  double get highValue => height * 0.1;
+
   // Color Extensions
-  Color get primaryColor => Theme.of(this).primaryColor;
-  Color get primaryColorDark => Theme.of(this).primaryColorDark;
-  Color get primaryColorLight => Theme.of(this).primaryColorLight;
   Color get primary => Theme.of(this).colorScheme.primary;
   Color get onPrimary => Theme.of(this).colorScheme.onPrimary;
   Color get secondary => Theme.of(this).colorScheme.secondary;
   Color get onSecondary => Theme.of(this).colorScheme.onSecondary;
   Color get tertiary => Theme.of(this).colorScheme.tertiary;
   Color get onTertiary => Theme.of(this).colorScheme.onTertiary;
-  Color get cardColor => Theme.of(this).cardColor;
   Color get error => Theme.of(this).colorScheme.error;
   Color get onError => Theme.of(this).colorScheme.onError;
   Color get errorContainer => Theme.of(this).colorScheme.errorContainer;
   Color get surface => Theme.of(this).colorScheme.surface;
   Color get onSurface => Theme.of(this).colorScheme.onSurface;
   Color get surfaceContainer => Theme.of(this).colorScheme.surfaceContainer;
-  Color get surfaceContainerHigh =>
-      Theme.of(this).colorScheme.surfaceContainerHigh;
-  Color get onSecondaryContainer =>
-      Theme.of(this).colorScheme.onSecondaryContainer;
+  Color get surfaceContainerHigh => Theme.of(this).colorScheme.surfaceContainerHigh;
+  Color get onSecondaryContainer => Theme.of(this).colorScheme.onSecondaryContainer;
 
   // Spacer
   Widget spacerHeight(double percentage) {

@@ -1,5 +1,8 @@
 import 'package:vilsa/features/stock/model/stock_model.dart';
 
+/// Transaction type enum
+enum TransactionType { buy, sell, dividend }
+
 /// Model representing a stock transaction with associated information
 class TransactionModel {
   final String id;
@@ -12,6 +15,7 @@ class TransactionModel {
   final String note;
   final DateTime createDate;
   final double dividends;
+  final TransactionType type;
 
   TransactionModel({
     required this.id,
@@ -24,6 +28,7 @@ class TransactionModel {
     this.note = '',
     required this.createDate,
     required this.dividends,
+    this.type = TransactionType.buy,
   });
 
   /// Converts this model to a map for Firebase storage
@@ -46,6 +51,7 @@ class TransactionModel {
       "note": note,
       "createDate": createDate.toIso8601String(),
       "dividends": dividends,
+      "type": type.index,
     };
   }
 
@@ -92,6 +98,15 @@ class TransactionModel {
       dividends = double.tryParse(json["dividends"] as String) ?? 0.0;
     }
 
+    // Transaction type
+    TransactionType transactionType = TransactionType.buy; // Varsayılan olarak alış işlemi
+    if (json["type"] is num) {
+      final typeIndex = (json["type"] as num).toInt();
+      if (typeIndex >= 0 && typeIndex < TransactionType.values.length) {
+        transactionType = TransactionType.values[typeIndex];
+      }
+    }
+
     return TransactionModel(
       id: json["id"] ?? '',
       stockId: stockId,
@@ -103,6 +118,7 @@ class TransactionModel {
       note: note,
       createDate: json["createDate"] != null ? DateTime.parse(json["createDate"]) : DateTime.now(),
       dividends: dividends,
+      type: transactionType,
     );
   }
 
@@ -118,6 +134,7 @@ class TransactionModel {
     String? note,
     DateTime? createDate,
     double? dividends,
+    TransactionType? type,
   }) {
     return TransactionModel(
       id: id ?? this.id,
@@ -130,6 +147,7 @@ class TransactionModel {
       note: note ?? this.note,
       createDate: createDate ?? this.createDate,
       dividends: dividends ?? this.dividends,
+      type: type ?? this.type,
     );
   }
 

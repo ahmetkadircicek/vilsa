@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:vilsa/core/constants/color_constants.dart';
 
 /// Base text component that all other text components extend from
 class _GeneralText extends StatelessWidget {
@@ -13,7 +14,7 @@ class _GeneralText extends StatelessWidget {
   const _GeneralText({
     super.key,
     required this.text,
-    this.color = Colors.black,
+    this.color = AppColors.black,
     this.isBold = false,
     this.isCentred = false,
     this.fontSize = 16,
@@ -72,7 +73,7 @@ class Highlight extends _GeneralText {
     super.color = null,
     super.isBold = true,
     super.isCentred,
-    super.fontSize = 16,
+    super.fontSize = 18,
   });
 }
 
@@ -85,7 +86,7 @@ class Content extends _GeneralText {
     super.color = null,
     super.isBold = false,
     super.isCentred,
-    super.fontSize = 14,
+    super.fontSize = 16,
   });
 }
 
@@ -98,7 +99,7 @@ class Helper extends _GeneralText {
     super.color = null,
     super.isBold = false,
     super.isCentred,
-    super.fontSize = 12,
+    super.fontSize = 14,
     super.overflow,
   });
 }
@@ -112,7 +113,7 @@ class Label extends _GeneralText {
     super.color = null,
     super.isBold = false,
     super.isCentred,
-    super.fontSize = 10,
+    super.fontSize = 12,
     super.overflow,
   });
 }

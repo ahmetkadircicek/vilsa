@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
 import 'package:vilsa/core/components/general_text.dart';
-import 'package:vilsa/core/constants/general_constants.dart';
+import 'package:vilsa/core/components/confirm_dialog.dart';
+import 'package:vilsa/core/components/success_dialog.dart';
+import 'package:vilsa/core/constants/color_constants.dart';
 import 'package:vilsa/core/constants/padding_constants.dart';
 import 'package:vilsa/core/extensions/context_extension.dart';
 import 'package:vilsa/core/extensions/price_formatter.dart';
@@ -12,29 +14,110 @@ import 'package:vilsa/features/portfolio/viewmodel/portfolio_view.dart.dart';
 import 'package:vilsa/features/stock/model/stock_model.dart';
 import 'package:vilsa/features/stock_details/view/stock_details_view.dart';
 import 'package:vilsa/features/stock_details/viewmodel/stock_details_view_model.dart';
+import 'package:vilsa/features/home/viewmodel/home_view_model.dart';
+import 'package:vilsa/features/stock/viewmodel/stock_view_model.dart';
 
-class PortfolioView extends StatelessWidget {
+class PortfolioView extends StatefulWidget {
   const PortfolioView({super.key});
+
+  @override
+  State<PortfolioView> createState() => _PortfolioViewState();
+}
+
+class _PortfolioViewState extends State<PortfolioView> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late List<Animation<double>> _fadeAnimations;
+  late List<Animation<Offset>> _slideAnimations;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _fadeAnimations = List.generate(10, (index) {
+      return Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: _controller,
+        curve: Interval(
+          index * 0.05,
+          0.5 + index * 0.05,
+          curve: Curves.easeOut,
+        ),
+      ));
+    });
+
+    _slideAnimations = List.generate(10, (index) {
+      return Tween<Offset>(
+        begin: const Offset(0.2, 0),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _controller,
+        curve: Interval(
+          index * 0.05,
+          0.5 + index * 0.05,
+          curve: Curves.easeOut,
+        ),
+      ));
+    });
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<PortfolioViewModel>(
       builder: (context, viewModel, child) {
         if (viewModel.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return Padding(
+            padding: PaddingConstants.allLarge,
+            child: const Center(child: CircularProgressIndicator()),
+          );
         }
-        return viewModel.stocks.isNotEmpty ? _buildStockList(context, viewModel) : const SizedBox.shrink();
+        return viewModel.stocks.isNotEmpty
+            ? _buildStockList(context, viewModel)
+            : Center(
+                child: Content(
+                  text: 'Portföyünüzde hisse bulunmamaktadır.',
+                  isCentred: true,
+                ),
+              );
       },
     );
   }
 
   Widget _buildStockList(BuildContext context, PortfolioViewModel viewModel) {
+    final homeViewModel = Provider.of<HomeViewModel>(context, listen: true);
+    final stocks = homeViewModel.filteredStocks;
+
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: viewModel.stocks.length,
+      padding: EdgeInsets.zero,
+      itemCount: stocks.length,
       shrinkWrap: true,
       itemBuilder: (BuildContext context, int index) {
-        return _buildStockItem(context, viewModel.stocks[index]);
+        return AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return FadeTransition(
+              opacity: _fadeAnimations[index % 10],
+              child: SlideTransition(
+                position: _slideAnimations[index % 10],
+                child: _buildStockItem(context, stocks[index]),
+              ),
+            );
+          },
+        );
       },
     );
   }
@@ -59,7 +142,7 @@ class PortfolioView extends StatelessWidget {
     }
 
     return Padding(
-      padding: PaddingConstants.onlyBottomSmall,
+      padding: EdgeInsets.only(bottom: 8),
       child: GestureDetector(
         onTap: () async {
           await Provider.of<StockDetailsViewModel>(context, listen: false).fetchTransactions(stock.id);
@@ -69,65 +152,73 @@ class PortfolioView extends StatelessWidget {
           key: Key(stock.id),
           endActionPane: _buildSlidableActions(context, stock),
           child: Container(
+            padding: PaddingConstants.allMedium,
             decoration: BoxDecoration(
-              borderRadius: GeneralConstants.instance.borderRadius,
-              color: context.surfaceContainer,
-              border: Border.all(color: context.secondary.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(8),
+              color: AppColors.white,
             ),
-            padding: PaddingConstants.allSmall,
-            child: Column(
+            child: Row(
               children: [
-                Row(
-                  spacing: 8,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: context.primary.withValues(alpha: 0.2),
-                      child: _getStockIcon(context, 'stock'),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Helper(
-                            text: stock.name,
-                            overflow: true,
-                            isBold: true,
-                          ),
-                          Label(
-                            text: stock.abbreviation,
-                            overflow: true,
-                            fontSize: 10,
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (totalQuantity > 0)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Helper(
-                            text: averagePrice.toPrice(),
-                            color: context.onSurface,
-                            overflow: true,
-                            isBold: true,
-                          ),
-                          Label(
-                            text: 'Toplam: ${totalValue.toPrice()}',
-                            color: context.onSurface.withValues(alpha: 0.7),
-                            overflow: true,
-                          ),
-                          Label(
-                            text: 'Adet: $totalQuantity',
-                            color: context.onSurface.withValues(alpha: 0.5),
-                            overflow: true,
-                            fontSize: 10,
-                          ),
-                        ],
-                      ),
-                    Icon(Icons.chevron_right, color: context.secondary),
-                  ],
+                CircleAvatar(
+                  backgroundColor: context.primary.withValues(alpha: 0.1),
+                  radius: 20,
+                  child: _getStockIcon(context, 'stock'),
                 ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Helper(
+                        text: stock.name,
+                        overflow: true,
+                        isBold: true,
+                      ),
+                      Label(
+                        text: stock.abbreviation,
+                        overflow: true,
+                        fontSize: 12,
+                        color: AppColors.black54,
+                      ),
+                    ],
+                  ),
+                ),
+                if (totalQuantity > 0)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Helper(
+                        text: averagePrice.toPrice(),
+                        color: context.onSurface,
+                        overflow: true,
+                        isBold: true,
+                      ),
+                      Label(
+                        text: 'Toplam: ${totalValue.toPrice()}',
+                        color: context.onSurface.withValues(alpha: 0.7),
+                        overflow: true,
+                        fontSize: 12,
+                      ),
+                      Label(
+                        text: 'Adet: $totalQuantity',
+                        color: context.onSurface.withValues(alpha: 0.5),
+                        overflow: true,
+                        fontSize: 10,
+                      ),
+                    ],
+                  ),
+                context.spacerWidthFixed(8),
+                if (stock.transactions.isNotEmpty)
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    color: context.onSurface.withValues(alpha: 0.1),
+                  ),
+                if (stock.transactions.isEmpty)
+                  Icon(
+                    Icons.add,
+                    size: 30,
+                    color: context.onSurface.withValues(alpha: 0.1),
+                  ),
               ],
             ),
           ),
@@ -143,13 +234,13 @@ class PortfolioView extends StatelessWidget {
         SlidableAction(
           onPressed: (context) => _onPressedEdit(context, stock),
           backgroundColor: context.primary,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.white,
           icon: Icons.edit,
         ),
         SlidableAction(
           onPressed: (context) => _onPressedDelete(context, stock),
           backgroundColor: context.error,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.white,
           icon: Icons.delete,
           borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
         ),
@@ -167,47 +258,100 @@ class PortfolioView extends StatelessWidget {
     );
   }
 
-  void _onPressedDelete(BuildContext context, StockModel stock) {
-    context.read<PortfolioViewModel>().removeStock(stock.id);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: Theme.of(context).primaryColor,
-        content: Text(
-          '${stock.name} silindi',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: Colors.white,
-          ),
-          textAlign: TextAlign.center,
-        ),
+  void _onPressedDelete(BuildContext context, StockModel stock) async {
+    // Global context'i NavigationService üzerinden al - bu daha uzun ömürlü
+    final globalContext = NavigationService.instance.navigatorKey.currentContext;
+
+    // Silmeden önce ViewModel referanslarını al
+    final portfolioViewModel = Provider.of<PortfolioViewModel>(context, listen: false);
+    HomeViewModel? homeViewModel;
+    StockViewModel? stockViewModel;
+
+    try {
+      homeViewModel = Provider.of<HomeViewModel>(context, listen: false);
+    } catch (e) {
+      print('HomeViewModel erişilemedi: $e');
+    }
+
+    // Onay dialogu göster
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => ConfirmDialog(
+        title: 'Hisse Silme',
+        message: '${stock.name} hissesini silmek istediğinize emin misiniz?',
+        confirmText: 'Sil',
+        cancelText: 'İptal',
+        icon: Icons.delete_forever_rounded,
       ),
     );
+
+    if (confirm == true) {
+      try {
+        // Silme işlemini gerçekleştir
+        await portfolioViewModel.removeStock(stock.id);
+
+        // Silme işlemi başarılı oldu - şimdi güvenli şekilde UI'ı güncelle
+
+        // Önce state'leri güncelle
+        if (homeViewModel != null) {
+          homeViewModel.fetchStocks();
+          homeViewModel.refreshStocksList();
+        }
+
+        portfolioViewModel.refreshStocks();
+
+        if (stockViewModel != null) {
+          stockViewModel.fetchStocks();
+        }
+
+        // Başarı mesajını göster - global context'i kullan
+        if (globalContext != null && globalContext.mounted) {
+          // Dialog dışında başka bir yöntemle bildirim göster
+          showDialog(
+            context: globalContext,
+            barrierDismissible: false,
+            builder: (context) => SuccessDialog(
+              message: '${stock.name} hissesi başarıyla silindi!',
+              backgroundColor: AppColors.dividendGreen,
+              icon: Icons.delete_outline_rounded,
+              iconColor: Colors.white,
+            ),
+          );
+        }
+
+        // Widget hala mount edilmiş mi kontrol et ve state'i güncelle
+        if (mounted) {
+          setState(() {});
+        }
+      } catch (e) {
+        print('Hisse silme hatası: $e');
+
+        // Hata bildirimini göster - global context kullan
+        if (globalContext != null && globalContext.mounted) {
+          showDialog(
+            context: globalContext,
+            barrierDismissible: false,
+            builder: (context) => SuccessDialog(
+              message: 'Hisse silinirken bir hata oluştu!',
+              icon: Icons.error_outline_rounded,
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
   }
 
   Widget _getStockIcon(BuildContext context, String type) {
     switch (type) {
       case 'cash':
-        return Icon(Icons.currency_exchange, color: context.primary, size: 30);
+        return Icon(Icons.currency_exchange, color: context.primary, size: 24);
       case 'gold':
-        return Icon(Icons.adjust, color: context.primary, size: 30);
+        return Icon(Icons.adjust, color: context.primary, size: 24);
       case 'stock':
-        return Icon(Icons.pages, color: context.primary, size: 30);
+        return Icon(Icons.pages, color: context.primary, size: 24);
       default:
-        return Icon(Icons.pages, color: context.primary, size: 30);
+        return Icon(Icons.pages, color: context.primary, size: 24);
     }
   }
 }
-// Updated on 2025-01-03 - create settings page
-// Updated on 2025-01-08 - resolve authentication token expiry
-// Updated on 2025-01-21 - enhance visual hierarchy
-// Updated on 2025-01-29 - refine animation transitions
-// Updated on 2025-02-10 - enhance performance of list rendering
-// Updated on 2025-02-20 - add navigation structure
-// Updated on 2025-02-21 - implement login screen UI
-// Updated on 2025-03-03 - update icon designs
-// Updated on 2025-03-04 - add user preferences storage
-// Updated on 2025-03-06 - update navigation menu styling
-// Updated on 2025-03-11 - enhance performance of list rendering
-// Updated on 2025-03-20 - add search functionality
-// Updated on 2025-03-22 - correct data loading problems

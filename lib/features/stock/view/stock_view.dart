@@ -27,7 +27,7 @@ class StockView extends StatelessWidget {
 
   Widget _buildStockList(StockViewModel viewModel) {
     return Padding(
-      padding: PaddingConstants.pagePadding,
+      padding: PaddingConstants.allMedium,
       child: ListView.builder(
         itemCount: viewModel.stocks.length,
         itemBuilder: (context, index) {
@@ -99,10 +99,3 @@ class StockView extends StatelessWidget {
     );
   }
 }
-// Updated on 2025-01-24 - fix API response handling
-// Updated on 2025-01-30 - fix layout on smaller screens
-// Updated on 2025-02-03 - enhance performance of list rendering
-// Updated on 2025-02-06 - implement dark mode support
-// Updated on 2025-02-07 - enhance component reusability
-// Updated on 2025-02-08 - implement dark mode support
-// Updated on 2025-03-14 - resolve authentication token expiry

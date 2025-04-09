@@ -7,7 +7,7 @@ import 'package:vilsa/core/init/navigation/navigation_service.dart';
 import 'package:vilsa/core/init/network/firebase_options.dart';
 import 'package:vilsa/core/init/notifier/provider_manager.dart';
 import 'package:vilsa/core/init/theme/app_theme.dart';
-import 'package:vilsa/features/main/view/main_view.dart';
+import 'package:vilsa/features/splash/view/splash_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,10 +33,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Peasy',
+      title: 'Vilsa',
       theme: LightTheme.theme,
       debugShowCheckedModeBanner: false,
-      home: const MainView(),
+      home: const SplashView(),
       navigatorKey: NavigationService.instance.navigatorKey,
     );
   }

@@ -2,13 +2,20 @@ import 'package:board_datetime_picker/board_datetime_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:vilsa/core/base/base_view_model.dart';
+import 'package:vilsa/core/components/general_text.dart';
+import 'package:vilsa/core/components/success_dialog.dart';
+import 'package:vilsa/core/constants/color_constants.dart';
+import 'package:vilsa/core/init/event/event_bus.dart';
+import 'package:vilsa/core/init/network/stock_service.dart';
 import 'package:vilsa/core/init/network/transaction_service.dart';
 import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
 import 'package:vilsa/features/stock/model/stock_model.dart';
 
-/// ViewModel for adding transactions
+/// ViewModel for adding or editing transactions
 class AddTransactionViewModel extends BaseViewModel {
   final TransactionService _transactionService = TransactionService.instance;
+  final StockService _stockService = StockService.instance;
+  final EventBus _eventBus = EventBus.instance;
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
@@ -19,20 +26,72 @@ class AddTransactionViewModel extends BaseViewModel {
   final BoardDateTimeController controller = BoardDateTimeController();
   String? _stockId;
 
+  DateTime selectedDate = DateTime.now();
+  TimeOfDay selectedTime = TimeOfDay.now();
+  StockModel? selectedStock;
+  TransactionType selectedType = TransactionType.buy;
+  TransactionModel? transactionToEdit;
+
+  // For dropdown stock selection
+  List<StockModel> _stocks = [];
+  List<StockModel> get stocks => _stocks;
+
   String? get stockId => _stockId;
   set stockId(String? value) {
     _stockId = value;
     notifyListeners();
   }
 
-  // Single date property
-  DateTime? _selectedDate = DateTime.now();
-
-  DateTime? get selectedDate => _selectedDate;
-
   /// Set the selected date
   void setSelectedDate(DateTime date) {
-    _selectedDate = date;
+    // Aynı tarih zaten seçiliyse gereksiz bildirim gönderme
+    if (selectedDate == date) return;
+
+    selectedDate = date;
+    selectedTime = TimeOfDay.fromDateTime(date);
+    notifyListeners();
+  }
+
+  /// Load stocks from service
+  Future<void> loadStocks() async {
+    try {
+      setLoading(true);
+      _stocks = await _stockService.fetchAll();
+      setLoading(false);
+    } catch (e) {
+      setLoading(false);
+      throw Exception('Failed to load stocks: $e');
+    }
+  }
+
+  /// Initialize with an existing transaction for editing
+  void setTransactionToEdit(TransactionModel transaction) {
+    transactionToEdit = transaction;
+    priceController.text = transaction.price.toString();
+    quantityController.text = transaction.quantity.toString();
+    dividendsController.text = transaction.dividends.toString();
+    noteController.text = transaction.note;
+    selectedDate = transaction.date;
+    selectedTime = TimeOfDay.fromDateTime(transaction.date);
+    selectedType = transaction.type;
+    selectedStock = transaction.stock;
+
+    notifyListeners();
+  }
+
+  /// Reset form
+  void resetForm() {
+    nameController.clear();
+    priceController.clear();
+    quantityController.clear();
+    noteController.clear();
+    abbreviationController.clear();
+    dividendsController.clear();
+    selectedDate = DateTime.now();
+    selectedTime = TimeOfDay.now();
+    selectedStock = null;
+    selectedType = TransactionType.buy;
+    transactionToEdit = null;
     notifyListeners();
   }
 
@@ -66,20 +125,28 @@ class AddTransactionViewModel extends BaseViewModel {
   }
 
   /// Save the transaction data
-  Future<TransactionModel?> sendData(StockModel stock, {required BuildContext context}) async {
+  Future<TransactionModel?> sendData(
+    StockModel stock, {
+    required BuildContext context,
+    TransactionModel? existingTransaction,
+  }) async {
     return await executeAsync<TransactionModel?>(() async {
       // Validation checks
       double? price = parseCurrencyValue(priceController.text);
       if (price == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text("Fiyat alanı geçerli bir değer olmalı ve sıfırdan büyük olmalı"),
-              backgroundColor: Colors.red),
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => SuccessDialog(
+            message: 'Fiyat alanı geçerli bir değer olmalı ve sıfırdan büyük olmalı',
+            icon: Icons.error_outline_rounded,
+            backgroundColor: AppColors.error,
+          ),
         );
         return null;
       }
 
-      // Adet kontrolüp
+      // Adet kontrolü
       int? quantity;
       try {
         quantity = int.tryParse(quantityController.text);
@@ -87,10 +154,14 @@ class AddTransactionViewModel extends BaseViewModel {
           throw Exception();
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text("Miktar alanı geçerli bir tam sayı olmalı ve sıfırdan büyük olmalı"),
-              backgroundColor: Colors.red),
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => SuccessDialog(
+            message: 'Miktar alanı geçerli bir tam sayı olmalı ve sıfırdan büyük olmalı',
+            icon: Icons.error_outline_rounded,
+            backgroundColor: AppColors.error,
+          ),
         );
         return null;
       }
@@ -100,41 +171,91 @@ class AddTransactionViewModel extends BaseViewModel {
       if (dividendsController.text.isNotEmpty) {
         double? parsedDividends = parseCurrencyValue(dividendsController.text, allowZero: true);
         if (parsedDividends == null || parsedDividends < 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text("Temettü alanı geçerli bir değer olmalı ve negatif olmamalı"),
-                backgroundColor: Colors.red),
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => SuccessDialog(
+              message: 'Temettü alanı geçerli bir değer olmalı ve negatif olmamalı',
+              icon: Icons.error_outline_rounded,
+              backgroundColor: AppColors.error,
+            ),
           );
           return null;
         }
         dividends = parsedDividends;
       }
 
+      // Eğer düzenleme yapılıyorsa, mevcut işlemi güncelle
+      final String transactionId = existingTransaction?.id ?? const Uuid().v4();
+
       // Create transaction with validated values
       final transaction = TransactionModel(
-        id: const Uuid().v4(),
+        id: transactionId,
         stockId: stock.id,
         stockName: stock.name,
         stock: stock,
         price: price,
         quantity: quantity,
         note: noteController.text,
-        date: _selectedDate ?? DateTime.now(),
-        createDate: DateTime.now(),
+        date: selectedDate,
+        createDate: existingTransaction?.createDate ?? DateTime.now(),
         dividends: dividends,
+        type: selectedType,
       );
 
       // Log the transaction data before saving
+      final isUpdate = existingTransaction != null;
       debugPrint(
-          "💹 Saving transaction: ID=${transaction.id}, Stock=${stock.name}, Price=$price, Quantity=$quantity, Dividends=$dividends");
+          "${isUpdate ? '🔄 Updating' : '💹 Creating'} transaction: ID=${transaction.id}, Stock=${stock.name}, Price=$price, Quantity=$quantity, Dividends=$dividends");
 
       // Save to database
-      await _transactionService.save(transaction);
+      if (isUpdate) {
+        await _transactionService.update(transaction);
 
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("İşlem başarıyla kaydedildi"), backgroundColor: Colors.green),
-      );
+        // İşlem güncellendi olayını yayınla
+        _eventBus.fireEvent(EventType.transactionUpdated, data: transaction);
+      } else {
+        await _transactionService.save(transaction);
+
+        // İşlem eklendi olayını yayınla
+        _eventBus.fireEvent(EventType.transactionAdded, data: transaction);
+      }
+
+      // Başarılı işlem dialogu göster
+      if (context.mounted) {
+        // İşlem türüne göre (Alım/Satım) ve işlem moduna göre (Ekleme/Güncelleme) mesaj oluştur
+        String actionText = selectedType == TransactionType.buy ? "alındı" : "satıldı";
+        if (isUpdate) {
+          actionText = "güncellendi";
+        }
+
+        print("Dialog gösteriliyor: isUpdate=$isUpdate, stock=${stock.name}, stockId=${stock.id}");
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => SuccessDialog(
+            message: isUpdate
+                ? '${stock.name} işlemi başarıyla güncellendi!'
+                : '$quantity adet ${stock.name} hissesi başarıyla $actionText!',
+            icon: Icons.check_circle_outline_rounded,
+            backgroundColor: AppColors.dividendGreen,
+            iconColor: Colors.white,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        // Dialog gösterdikten sonra bekleme süresi
+        Future.delayed(const Duration(milliseconds: 2500), () {
+          print("İşlem tamamlandı, ekran kapatılıyor");
+
+          // Context hala geçerli mi kontrol et
+          if (context.mounted) {
+            // Ana ekrana dön
+            Navigator.of(context).pop();
+          }
+        });
+      }
 
       // Clear fields after saving
       nameController.clear();
@@ -145,11 +266,12 @@ class AddTransactionViewModel extends BaseViewModel {
       dividendsController.clear();
 
       // Reset date
-      _selectedDate = DateTime.now();
+      selectedDate = DateTime.now();
+      selectedTime = TimeOfDay.now();
       _stockId = null;
 
       return transaction;
-    }, errorPrefix: "Failed to save transaction");
+    }, errorPrefix: existingTransaction != null ? "Failed to update transaction" : "Failed to save transaction");
   }
 
   @override
@@ -163,18 +285,3 @@ class AddTransactionViewModel extends BaseViewModel {
     super.dispose();
   }
 }
-// Updated on 2025-01-10 - correct sorting algorithm
-// Updated on 2025-01-12 - simplify authentication flow
-// Updated on 2025-01-30 - implement sorting options
-// Updated on 2025-02-02 - enhance performance of list rendering
-// Updated on 2025-02-03 - simplify API integration
-// Updated on 2025-02-05 - address network timeout handling
-// Updated on 2025-02-06 - setup firebase configuration
-// Updated on 2025-02-13 - add stock detail screen
-// Updated on 2025-02-14 - add stock detail screen
-// Updated on 2025-02-16 - create stock listing component
-// Updated on 2025-02-21 - implement sorting options
-// Updated on 2025-02-25 - correct date formatting issues
-// Updated on 2025-03-05 - implement filtering options
-// Updated on 2025-03-10 - create data caching mechanism
-// Updated on 2025-03-17 - add search functionality

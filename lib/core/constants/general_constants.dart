@@ -21,11 +21,11 @@ class GeneralConstants {
     borderRadius: BorderRadius.circular(32),
   );
 
-  final fontSizeExtraSmall = 12.0; // 12.0
-  final fontSizeSmall = 14.0; // 16.0
-  final fontSizeMedium = 18.0; // 20.0
-  final fontSizeLarge = 24.0; // 24.0
-  final fontSizeExtraLarge = 26.0; // 28.0
+  final fontSizeExtraSmall = 12.0; // minimum 12
+  final fontSizeSmall = 14.0;
+  final fontSizeMedium = 16.0;
+  final fontSizeLarge = 20.0;
+  final fontSizeExtraLarge = 24.0; // maximum 24
 
   final fontWeightLight = FontWeight.w300; // w300
   final fontWeightRegular = FontWeight.w500; // w500

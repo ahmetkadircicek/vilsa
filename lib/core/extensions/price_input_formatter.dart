@@ -1,16 +1,12 @@
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 
-class CurrencyInputFormatter extends TextInputFormatter {
-  final NumberFormat currencyFormat = NumberFormat.currency(
-    locale: 'tr_TR',
-    symbol: '₺',
-    decimalDigits: 2,
-  );
-
+/// Clean price input formatter that supports natural decimal input
+/// Supports up to 4 decimal places without currency symbols
+class PriceInputFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    // Eğer giriş tamamen silindiyse boş bırak (₺0,00 yerine "")
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    // Allow empty input
     if (newValue.text.isEmpty) {
       return const TextEditingValue(
         text: '',
@@ -18,28 +14,55 @@ class CurrencyInputFormatter extends TextInputFormatter {
       );
     }
 
-    // Sadece sayıları al, diğer karakterleri kaldır
-    String newValueText = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    // Only allow numbers, comma and dot (convert dot to comma)
+    String newText = newValue.text.replaceAll(RegExp(r'[^0-9,.]'), '');
 
-    // İlk sayı olarak "0" girilmesini önle (ama "0,01" gibi değerler girilebilir)
-    if (newValueText.length == 1 && newValueText == '0') {
+    // Convert dot to comma for Turkish decimal format
+    newText = newText.replaceAll('.', ',');
+
+    // Replace multiple commas with single comma
+    List<String> parts = newText.split(',');
+    if (parts.length > 2) {
+      newText = '${parts[0]},${parts.sublist(1).join('')}';
+    }
+
+    // Limit decimal places to 4
+    if (parts.length == 2 && parts[1].length > 4) {
+      newText = '${parts[0]},${parts[1].substring(0, 4)}';
+    }
+
+    // Validate numeric value
+    double? numericValue;
+    try {
+      String parseableText = newText.replaceAll(',', '.');
+      numericValue = double.tryParse(parseableText);
+    } catch (e) {
       return oldValue;
     }
 
-    // Sayıyı parse et, hata olursa eski değeri koru
-    int newValueNumber = int.tryParse(newValueText) ?? 0;
-
-    // Maksimum sınır: 99,999,999.99
-    if (newValueNumber > 999999999) {
+    if (numericValue == null) {
       return oldValue;
     }
 
-    // Yeni değeri formatla
-    final formattedValue = currencyFormat.format(newValueNumber / 100);
+    // Maximum limit: 999,999.9999
+    if (numericValue > 999999.9999) {
+      return oldValue;
+    }
+
+    // Calculate cursor position
+    int cursorPosition = newText.length;
+
+    // If user was typing at the end, keep cursor at end
+    if (newValue.selection.baseOffset >= newValue.text.length) {
+      cursorPosition = newText.length;
+    } else {
+      // Try to maintain relative cursor position
+      cursorPosition = newValue.selection.baseOffset.clamp(0, newText.length);
+    }
 
     return TextEditingValue(
-      text: formattedValue,
-      selection: TextSelection.collapsed(offset: formattedValue.length),
+      text: newText,
+      selection: TextSelection.collapsed(offset: cursorPosition),
     );
   }
 }

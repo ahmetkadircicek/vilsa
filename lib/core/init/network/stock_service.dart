@@ -1,180 +1,112 @@
-import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:uuid/uuid.dart';
-import 'package:vilsa/core/base/base_service.dart';
 import 'package:vilsa/features/stock/model/stock_model.dart';
 
-import 'database_helper.dart';
-
-/// Service to handle stock-related data operations
-class StockService implements BaseService<StockModel> {
+class StockService {
   static final StockService _instance = StockService._internal();
-  final DatabaseHelper _db = DatabaseHelper.instance;
   static const String _path = 'stock';
+  final _db = FirebaseDatabase.instance.ref();
 
   StockService._internal();
-
   static StockService get instance => _instance;
 
-  @override
   Future<List<StockModel>> fetchAll() async {
-    try {
-      final data = await _db.getAll(_path);
-      List<StockModel> stocks = [];
+    final snapshot = await _db.child(_path).get();
+    if (!snapshot.exists || snapshot.value == null) return [];
 
-      data.forEach((key, value) {
-        try {
-          final stockMap = Map<String, dynamic>.from(value as Map);
-
-          // Ensure the stock has an ID
-          if (stockMap['id'] == null || stockMap['id'].toString().isEmpty) {
-            stockMap['id'] = key.toString();
-          }
-
-          // Create stock model
-          StockModel stock = StockModel.fromJson(stockMap);
-          stocks.add(stock);
-        } catch (e) {
-          debugPrint("🚨 Error parsing individual stock: $e");
-        }
-      });
-
-      debugPrint("🚀 Loaded ${stocks.length} stocks");
-      return stocks;
-    } catch (e) {
-      debugPrint("🚨 Error fetching stocks: $e");
-      throw Exception("Failed to fetch stocks: $e");
-    }
+    final data = Map<String, dynamic>.from(snapshot.value as Map);
+    return data.entries.map((entry) {
+      final map = Map<String, dynamic>.from(entry.value as Map);
+      map['id'] ??= entry.key;
+      return StockModel.fromJson(map);
+    }).toList();
   }
 
-  @override
   Future<StockModel?> fetchById(String id) async {
-    try {
-      final stocks = await fetchAll();
-      return stocks.firstWhere((stock) => stock.id == id);
-    } catch (e) {
-      debugPrint("🚨 Error fetching stock by ID: $e");
-      return null;
-    }
+    final all = await fetchAll();
+    return all.firstWhere((e) => e.id == id);
   }
 
-  @override
   Future<void> save(StockModel stock) async {
-    try {
-      // Sanitize and validate stock data
-      final Map<String, dynamic> stockData = _sanitizeStockData(stock.toJson());
+    final sanitizedData = _sanitizeStockData(stock.toJson());
 
-      // If stock has no ID, get one from Firebase
-      if (stock.id.isEmpty) {
-        final String? newId = await _db.push(_path, stockData);
-        if (newId != null) {
-          stockData['id'] = newId;
-          await _db.update(_path, newId, stockData);
-          debugPrint("🚀 New stock created with ID: $newId");
-        }
-      } else {
-        // Use existing ID
-        final String? firebaseKey = await _db.findKey(_path, 'id', stock.id);
-
-        if (firebaseKey != null) {
-          // Update existing record
-          await _db.update(_path, firebaseKey, stockData);
-          debugPrint("🚀 Updated existing stock with ID: ${stock.id}");
-        } else {
-          // Create new record with existing ID
-          final String? newId = await _db.push(_path, stockData);
-          debugPrint("🚀 Stock saved with key: $newId");
-        }
+    if (stock.id.isEmpty) {
+      final newRef = _db.child(_path).push();
+      final newId = newRef.key;
+      if (newId != null) {
+        sanitizedData['id'] = newId;
+        await newRef.set(sanitizedData);
       }
-    } catch (e) {
-      debugPrint("🚨 Stock save error: $e");
-      throw Exception("Failed to save stock: $e");
+    } else {
+      final key = await _findKeyByField('id', stock.id);
+      if (key != null) {
+        await _db.child(_path).child(key).update(sanitizedData);
+      } else {
+        await _db.child(_path).push().set(sanitizedData);
+      }
     }
   }
 
-  @override
   Future<void> update(StockModel stock) async {
-    try {
-      // Validate stock ID
-      if (stock.id.isEmpty) {
-        throw Exception("Stock must have a valid ID");
-      }
+    if (stock.id.isEmpty) throw Exception("Stock must have a valid ID");
 
-      // Sanitize and validate stock data
-      final Map<String, dynamic> stockData = _sanitizeStockData(stock.toJson());
+    final sanitizedData = _sanitizeStockData(stock.toJson());
+    final key = await _findKeyByField('id', stock.id);
 
-      // Get the firebase key for this stock ID
-      final String? firebaseKey = await _db.findKey(_path, 'id', stock.id);
-
-      if (firebaseKey != null) {
-        await _db.update(_path, firebaseKey, stockData);
-        debugPrint("🚀 Stock updated successfully!");
-      } else {
-        debugPrint("⚠️ Stock not found for update. Creating new one instead.");
-        await save(stock);
-      }
-    } catch (e) {
-      debugPrint("🚨 Stock update error: $e");
-      throw Exception("Failed to update stock: $e");
+    if (key != null) {
+      await _db.child(_path).child(key).update(sanitizedData);
+    } else {
+      await save(stock);
     }
   }
 
-  /// Helper method to sanitize stock data before saving
+  Future<void> delete(String stockId) async {
+    final key = await _findKeyByField('id', stockId);
+    if (key != null) {
+      await _db.child(_path).child(key).remove();
+    }
+  }
+
   Map<String, dynamic> _sanitizeStockData(Map<String, dynamic> data) {
     final result = Map<String, dynamic>.from(data);
 
-    // Ensure required fields are present
-    if (!result.containsKey('id') || result['id'] == null || result['id'] == '') {
+    if (result['id'] == null || (result['id'] as String).isEmpty) {
       result['id'] = const Uuid().v4();
     }
+    if (result['name'] == null) result['name'] = '';
+    if (result['abbreviation'] == null) result['abbreviation'] = '';
 
-    // Ensure name is valid
-    if (!result.containsKey('name') || result['name'] == null) {
-      result['name'] = '';
-    }
-
-    // Ensure abbreviation is valid
-    if (!result.containsKey('abbreviation') || result['abbreviation'] == null) {
-      result['abbreviation'] = '';
-    }
-
-    // Ensure dividends is a valid number
-    if (!result.containsKey('dividends') || result['dividends'] == null) {
+    if (result['dividends'] == null) {
       result['dividends'] = 0.0;
     } else if (result['dividends'] is String) {
       try {
-        result['dividends'] = double.parse(result['dividends'].toString().replaceAll(',', '.'));
-      } catch (e) {
+        result['dividends'] =
+            double.parse((result['dividends'] as String).replaceAll(',', '.'));
+      } catch (_) {
         result['dividends'] = 0.0;
       }
     } else if (result['dividends'] is! num) {
       result['dividends'] = 0.0;
     }
 
-    // Don't include transactions in the stock data
     result.remove('transactions');
-
-    // Other dynamic fields shouldn't be stored
     result.remove('currentPrice');
     result.remove('changePercentage');
 
     return result;
   }
 
-  @override
-  Future<void> delete(String stockId) async {
-    try {
-      // Get the firebase key for this stock ID
-      final String? firebaseKey = await _db.findKey(_path, 'id', stockId);
+  Future<String?> _findKeyByField(String fieldName, dynamic fieldValue) async {
+    final snapshot = await _db.child(_path).get();
+    if (!snapshot.exists || snapshot.value == null) return null;
 
-      if (firebaseKey != null) {
-        await _db.delete(_path, firebaseKey);
-        debugPrint("🚀 Stock removed successfully!");
-      } else {
-        debugPrint("⚠️ Stock not found for removal.");
+    final data = Map<String, dynamic>.from(snapshot.value as Map);
+    for (final entry in data.entries) {
+      final valueMap = Map<String, dynamic>.from(entry.value);
+      if (valueMap[fieldName] == fieldValue) {
+        return entry.key;
       }
-    } catch (e) {
-      debugPrint("🚨 Error removing stock: $e");
-      throw Exception("Failed to delete stock: $e");
     }
+    return null;
   }
 }

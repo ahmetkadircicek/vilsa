@@ -1,261 +1,181 @@
-import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:uuid/uuid.dart';
-import 'package:vilsa/core/base/base_service.dart';
 import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
 
-import 'database_helper.dart';
-
-/// Service to handle transaction-related data operations
-class TransactionService implements BaseService<TransactionModel> {
+class TransactionService {
   static final TransactionService _instance = TransactionService._internal();
-  final DatabaseHelper _db = DatabaseHelper.instance;
   static const String _path = 'transactions';
+  final _db = FirebaseDatabase.instance.ref();
 
   TransactionService._internal();
-
   static TransactionService get instance => _instance;
 
-  @override
   Future<List<TransactionModel>> fetchAll() async {
-    try {
-      final data = await _db.getAll(_path);
-      List<TransactionModel> transactions = [];
+    final snapshot = await _db.child(_path).get();
+    if (!snapshot.exists || snapshot.value == null) return [];
 
-      data.forEach((key, value) {
-        try {
-          final transactionMap = Map<String, dynamic>.from(value as Map);
-
-          // Ensure the transaction has an ID
-          if (transactionMap['id'] == null || transactionMap['id'].toString().isEmpty) {
-            transactionMap['id'] = key.toString();
-          }
-
-          // Create transaction model
-          TransactionModel transaction = TransactionModel.fromJson(transactionMap);
-          transactions.add(transaction);
-        } catch (e) {
-          debugPrint("🚨 Error parsing individual transaction: $e");
-        }
-      });
-
-      debugPrint("🚀 Loaded ${transactions.length} transactions");
-      return transactions;
-    } catch (e) {
-      debugPrint("🚨 Error fetching transactions: $e");
-      throw Exception("Failed to fetch transactions: $e");
-    }
+    final data = Map<String, dynamic>.from(snapshot.value as Map);
+    return data.entries.map((entry) {
+      final map = Map<String, dynamic>.from(entry.value as Map);
+      map['id'] ??= entry.key;
+      return TransactionModel.fromJson(map);
+    }).toList();
   }
 
-  /// Fetch transactions for a specific stock
   Future<List<TransactionModel>> fetchByStockId(String stockId) async {
-    try {
-      final transactions = await fetchAll();
-      return transactions.where((transaction) => transaction.stockId == stockId).toList();
-    } catch (e) {
-      debugPrint("🚨 Error fetching transactions for stock: $e");
-      return [];
-    }
+    final all = await fetchAll();
+    return all.where((t) => t.stockId == stockId).toList();
   }
 
-  @override
   Future<TransactionModel?> fetchById(String id) async {
-    try {
-      final transactions = await fetchAll();
-      return transactions.firstWhere((transaction) => transaction.id == id);
-    } catch (e) {
-      debugPrint("🚨 Error fetching transaction by ID: $e");
-      return null;
-    }
+    final all = await fetchAll();
+    return all.firstWhere((t) => t.id == id);
   }
 
-  @override
   Future<void> save(TransactionModel transaction) async {
-    try {
-      // Validate transaction data
-      if (transaction.stockId.isEmpty) {
-        throw Exception("Transaction must have a valid stockId");
+    if (transaction.stockId.isEmpty) {
+      throw Exception("Transaction must have a valid stockId");
+    }
+    final sanitized = _sanitizeTransactionData(transaction.toJson());
+
+    if (transaction.id.isEmpty) {
+      final newRef = _db.child(_path).push();
+      final newId = newRef.key;
+      if (newId != null) {
+        sanitized['id'] = newId;
+        await newRef.set(sanitized);
       }
-
-      // Prepare transaction data
-      final Map<String, dynamic> transactionData = _sanitizeTransactionData(transaction.toJson());
-
-      // If transaction has no ID, get one from Firebase
-      if (transaction.id.isEmpty) {
-        final String? newId = await _db.push(_path, transactionData);
-        if (newId != null) {
-          transactionData['id'] = newId;
-          await _db.update(_path, newId, transactionData);
-          debugPrint("🚀 New transaction created with ID: $newId");
-        }
+    } else {
+      final key = await _findKeyByField('id', transaction.id);
+      if (key != null) {
+        await _db.child(_path).child(key).update(sanitized);
       } else {
-        // Use existing ID
-        final String? firebaseKey = await _db.findKey(_path, 'id', transaction.id);
-
-        if (firebaseKey != null) {
-          // Update existing record
-          await _db.update(_path, firebaseKey, transactionData);
-          debugPrint("🚀 Updated existing transaction with ID: ${transaction.id}");
-        } else {
-          // Create new record with existing ID
-          final String? newId = await _db.push(_path, transactionData);
-          debugPrint("🚀 Transaction saved with key: $newId");
-        }
+        await _db.child(_path).push().set(sanitized);
       }
-    } catch (e) {
-      debugPrint("🚨 Transaction save error: $e");
-      throw Exception("Failed to save transaction: $e");
     }
   }
 
-  @override
   Future<void> update(TransactionModel transaction) async {
-    try {
-      // Validate transaction data
-      if (transaction.id.isEmpty || transaction.stockId.isEmpty) {
-        throw Exception("Transaction must have a valid id and stockId");
-      }
-
-      // Prepare transaction data
-      final Map<String, dynamic> transactionData = _sanitizeTransactionData(transaction.toJson());
-
-      // Get the firebase key for this transaction ID
-      final String? firebaseKey = await _db.findKey(_path, 'id', transaction.id);
-
-      if (firebaseKey != null) {
-        await _db.update(_path, firebaseKey, transactionData);
-        debugPrint("🚀 Transaction updated successfully!");
-      } else {
-        debugPrint("⚠️ Transaction not found for update. Creating new one instead.");
-        await save(transaction);
-      }
-    } catch (e) {
-      debugPrint("🚨 Transaction update error: $e");
-      throw Exception("Failed to update transaction: $e");
+    if (transaction.id.isEmpty || transaction.stockId.isEmpty) {
+      throw Exception("Transaction must have a valid id and stockId");
+    }
+    final sanitized = _sanitizeTransactionData(transaction.toJson());
+    final key = await _findKeyByField('id', transaction.id);
+    if (key != null) {
+      await _db.child(_path).child(key).update(sanitized);
+    } else {
+      await save(transaction);
     }
   }
 
-  /// Helper method to sanitize transaction data before saving
+  Future<void> delete(String transactionId) async {
+    final key = await _findKeyByField('id', transactionId);
+    if (key != null) {
+      await _db.child(_path).child(key).remove();
+    }
+  }
+
+  Future<void> deleteByStockId(String stockId) async {
+    final snapshot = await _db.child(_path).get();
+    if (!snapshot.exists || snapshot.value == null) return;
+
+    final data = Map<String, dynamic>.from(snapshot.value as Map);
+    List<String> keysToDelete = [];
+
+    for (var entry in data.entries) {
+      final value = Map<String, dynamic>.from(entry.value);
+      if (value['stockId'] == stockId) {
+        keysToDelete.add(entry.key);
+      } else if (value['stock'] is Map &&
+          (value['stock'] as Map)['id'] == stockId) {
+        keysToDelete.add(entry.key);
+      }
+    }
+
+    for (final key in keysToDelete) {
+      await _db.child(_path).child(key).remove();
+    }
+  }
+
   Map<String, dynamic> _sanitizeTransactionData(Map<String, dynamic> data) {
     final result = Map<String, dynamic>.from(data);
 
-    // Ensure required fields are present
-    if (!result.containsKey('id') || result['id'] == null) {
+    if (result['id'] == null || (result['id'] as String).isEmpty) {
       result['id'] = const Uuid().v4();
     }
 
-    // Ensure stockId is valid
-    if (!result.containsKey('stockId') || result['stockId'] == null || result['stockId'] == '') {
-      if (result.containsKey('stock') && result['stock'] is Map && result['stock']['id'] != null) {
+    if (result['stockId'] == null || (result['stockId'] as String).isEmpty) {
+      if (result['stock'] is Map && result['stock']['id'] != null) {
         result['stockId'] = result['stock']['id'];
       }
     }
 
-    // Ensure stockName is valid
-    if (!result.containsKey('stockName') || result['stockName'] == null || result['stockName'] == '') {
-      if (result.containsKey('stock') && result['stock'] is Map && result['stock']['name'] != null) {
+    if (result['stockName'] == null ||
+        (result['stockName'] as String).isEmpty) {
+      if (result['stock'] is Map && result['stock']['name'] != null) {
         result['stockName'] = result['stock']['name'];
       }
     }
 
-    // Ensure numeric fields are proper numbers
-    for (var field in ['price', 'dividends']) {
-      if (!result.containsKey(field) || result[field] == null) {
-        result[field] = 0.0;
-      } else if (result[field] is String) {
-        try {
-          result[field] = double.parse(result[field].toString().replaceAll(',', '.'));
-        } catch (e) {
-          result[field] = 0.0;
-        }
-      } else if (result[field] is! num) {
-        result[field] = 0.0;
+    if (result['price'] == null) {
+      result['price'] = 0.0;
+    } else if (result['price'] is String) {
+      try {
+        result['price'] =
+            double.parse(result['price'].toString().replaceAll(',', '.'));
+      } catch (_) {
+        result['price'] = 0.0;
       }
+    } else if (result['price'] is! num) {
+      result['price'] = 0.0;
     }
 
-    // Ensure quantity is an integer
-    if (!result.containsKey('quantity') || result['quantity'] == null) {
+    if (result['quantity'] == null) {
       result['quantity'] = 0;
     } else if (result['quantity'] is String) {
       try {
         result['quantity'] = int.parse(result['quantity']);
-      } catch (e) {
+      } catch (_) {
         result['quantity'] = 0;
       }
-    } else if (result['quantity'] is! num) {
-      result['quantity'] = 0;
     } else if (result['quantity'] is double) {
       result['quantity'] = (result['quantity'] as double).toInt();
+    } else if (result['quantity'] is! num) {
+      result['quantity'] = 0;
     }
 
-    // Ensure dates are valid
     for (var field in ['date', 'createDate']) {
-      if (!result.containsKey(field) || result[field] == null) {
-        result[field] = DateTime.now().toIso8601String();
-      } else if (result[field] is! String) {
+      if (result[field] == null || result[field] is! String) {
         result[field] = DateTime.now().toIso8601String();
       } else {
         try {
-          // Validate the date string
           DateTime.parse(result[field]);
-        } catch (e) {
+        } catch (_) {
           result[field] = DateTime.now().toIso8601String();
         }
       }
     }
 
-    // Ensure note is valid
-    if (!result.containsKey('note') || result['note'] == null) {
+    if (result['note'] == null) {
       result['note'] = '';
     }
 
-    // Remove legacy fields
     result.remove('notes');
 
     return result;
   }
 
-  @override
-  Future<void> delete(String transactionId) async {
-    try {
-      // Get the firebase key for this transaction ID
-      final String? firebaseKey = await _db.findKey(_path, 'id', transactionId);
+  Future<String?> _findKeyByField(String fieldName, dynamic fieldValue) async {
+    final snapshot = await _db.child(_path).get();
+    if (!snapshot.exists || snapshot.value == null) return null;
 
-      if (firebaseKey != null) {
-        await _db.delete(_path, firebaseKey);
-        debugPrint("🚀 Transaction removed successfully!");
-      } else {
-        debugPrint("⚠️ Transaction not found for removal.");
+    final data = Map<String, dynamic>.from(snapshot.value as Map);
+    for (final entry in data.entries) {
+      final valueMap = Map<String, dynamic>.from(entry.value);
+      if (valueMap[fieldName] == fieldValue) {
+        return entry.key;
       }
-    } catch (e) {
-      debugPrint("🚨 Error removing transaction: $e");
-      throw Exception("Failed to delete transaction: $e");
     }
-  }
-
-  /// Delete all transactions for a specific stock
-  Future<void> deleteByStockId(String stockId) async {
-    try {
-      // Find all transaction keys for this stock ID
-      final List<String> transactionKeys = await _db.findKeys(_path, 'stockId', stockId);
-
-      // Also check nested stock object
-      final data = await _db.getAll(_path);
-      for (var entry in data.entries) {
-        final value = Map<String, dynamic>.from(entry.value as Map);
-        if (value['stock'] is Map && (value['stock'] as Map)['id'] == stockId && !transactionKeys.contains(entry.key)) {
-          transactionKeys.add(entry.key);
-        }
-      }
-
-      // Remove all transactions for this stock
-      for (String key in transactionKeys) {
-        await _db.delete(_path, key);
-      }
-
-      debugPrint("🚀 Removed ${transactionKeys.length} transactions for stock $stockId");
-    } catch (e) {
-      debugPrint("🚨 Error removing transactions for stock: $e");
-      throw Exception("Failed to delete transactions for stock: $e");
-    }
+    return null;
   }
 }

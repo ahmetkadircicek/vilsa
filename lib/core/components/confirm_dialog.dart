@@ -1,8 +1,10 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
-import 'package:vilsa/core/constants/color_constants.dart';
 import 'package:vilsa/core/components/general_text.dart';
+import 'package:vilsa/core/constants/color_constants.dart';
 import 'package:vilsa/core/extensions/context_extension.dart';
+import 'package:vilsa/core/init/network/debounce_service.dart';
 
 class ConfirmDialog extends StatefulWidget {
   final String title;
@@ -30,7 +32,8 @@ class ConfirmDialog extends StatefulWidget {
   State<ConfirmDialog> createState() => _ConfirmDialogState();
 }
 
-class _ConfirmDialogState extends State<ConfirmDialog> with SingleTickerProviderStateMixin {
+class _ConfirmDialogState extends State<ConfirmDialog>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
@@ -167,7 +170,12 @@ class _ConfirmDialogState extends State<ConfirmDialog> with SingleTickerProvider
 
   Widget _buildCancelButton(BuildContext context) {
     return ElevatedButton(
-      onPressed: () => _closeWithResult(false),
+      onPressed: () {
+        DebounceService().execute(
+          'confirm_dialog_cancel',
+          () => _closeWithResult(false),
+        );
+      },
       style: ElevatedButton.styleFrom(
         backgroundColor: widget.cancelButtonColor ?? Colors.grey.shade200,
         foregroundColor: context.onSurface,
@@ -189,7 +197,12 @@ class _ConfirmDialogState extends State<ConfirmDialog> with SingleTickerProvider
 
   Widget _buildConfirmButton(BuildContext context) {
     return ElevatedButton(
-      onPressed: () => _closeWithResult(true),
+      onPressed: () {
+        DebounceService().execute(
+          'confirm_dialog_confirm',
+          () => _closeWithResult(true),
+        );
+      },
       style: ElevatedButton.styleFrom(
         backgroundColor: widget.confirmButtonColor ?? AppColors.error,
         foregroundColor: AppColors.white,

@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
-import 'package:vilsa/core/components/general_text.dart';
 import 'package:vilsa/core/components/confirm_dialog.dart';
+import 'package:vilsa/core/components/general_text.dart';
 import 'package:vilsa/core/components/success_dialog.dart';
 import 'package:vilsa/core/constants/color_constants.dart';
 import 'package:vilsa/core/constants/padding_constants.dart';
 import 'package:vilsa/core/extensions/context_extension.dart';
 import 'package:vilsa/core/extensions/price_formatter.dart';
 import 'package:vilsa/core/init/navigation/navigation_service.dart';
+import 'package:vilsa/core/init/network/debounce_service.dart';
 import 'package:vilsa/features/add_stock/view/add_stock_view.dart';
+import 'package:vilsa/features/home/viewmodel/home_view_model.dart';
 import 'package:vilsa/features/portfolio/viewmodel/portfolio_view.dart.dart';
 import 'package:vilsa/features/stock/model/stock_model.dart';
+import 'package:vilsa/features/stock/viewmodel/stock_view_model.dart';
 import 'package:vilsa/features/stock_details/view/stock_details_view.dart';
 import 'package:vilsa/features/stock_details/viewmodel/stock_details_view_model.dart';
-import 'package:vilsa/features/home/viewmodel/home_view_model.dart';
-import 'package:vilsa/features/stock/viewmodel/stock_view_model.dart';
 
 class PortfolioView extends StatefulWidget {
   const PortfolioView({super.key});
@@ -24,7 +25,8 @@ class PortfolioView extends StatefulWidget {
   State<PortfolioView> createState() => _PortfolioViewState();
 }
 
-class _PortfolioViewState extends State<PortfolioView> with SingleTickerProviderStateMixin {
+class _PortfolioViewState extends State<PortfolioView>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late List<Animation<double>> _fadeAnimations;
   late List<Animation<Offset>> _slideAnimations;
@@ -100,6 +102,10 @@ class _PortfolioViewState extends State<PortfolioView> with SingleTickerProvider
     final homeViewModel = Provider.of<HomeViewModel>(context, listen: true);
     final stocks = homeViewModel.filteredStocks;
 
+    if (stocks.isEmpty) {
+      return _buildEmptyState(context, homeViewModel);
+    }
+
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
       padding: EdgeInsets.zero,
@@ -122,6 +128,65 @@ class _PortfolioViewState extends State<PortfolioView> with SingleTickerProvider
     );
   }
 
+  Widget _buildEmptyState(BuildContext context, HomeViewModel homeViewModel) {
+    String message;
+    IconData icon;
+
+    if (homeViewModel.searchController.text.isNotEmpty) {
+      message =
+          'Aradığınız "${homeViewModel.searchController.text}" hissesi bulunamadı.';
+      icon = Icons.search_off;
+    } else {
+      switch (homeViewModel.stockFilterType.name) {
+        case 'traded':
+          message = 'İşlem yapılan hisse bulunmamaktadır.';
+          icon = Icons.trending_down;
+          break;
+        case 'untraded':
+          message = 'İşlem yapılmayan hisse bulunmamaktadır.';
+          icon = Icons.trending_up;
+          break;
+        default:
+          message = 'Portföyünüzde hisse bulunmamaktadır.';
+          icon = Icons.pie_chart;
+      }
+    }
+
+    return Padding(
+      padding: PaddingConstants.allLarge,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Content(
+              text: message,
+              isCentred: true,
+              color: Colors.grey[600],
+            ),
+            if (homeViewModel.searchController.text.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () {
+                  homeViewModel.searchController.clear();
+                },
+                child: Text(
+                  'Aramayı Temizle',
+                  style: TextStyle(color: context.primary),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildStockItem(BuildContext context, StockModel stock) {
     // Calculate average price and total value
     double averagePrice = 0.0;
@@ -141,86 +206,90 @@ class _PortfolioViewState extends State<PortfolioView> with SingleTickerProvider
       }
     }
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: 8),
-      child: GestureDetector(
-        onTap: () async {
-          await Provider.of<StockDetailsViewModel>(context, listen: false).fetchTransactions(stock.id);
-          NavigationService.instance.navigateTo(StockDetailsView(stock: stock));
-        },
-        child: Slidable(
-          key: Key(stock.id),
-          endActionPane: _buildSlidableActions(context, stock),
-          child: Container(
-            padding: PaddingConstants.allMedium,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: AppColors.white,
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: context.primary.withValues(alpha: 0.1),
-                  radius: 20,
-                  child: _getStockIcon(context, 'stock'),
+    return GestureDetector(
+      onTap: () {
+        DebounceService().execute(
+          'stock_details_${stock.id}',
+          () async {
+            await Provider.of<StockDetailsViewModel>(context, listen: false)
+                .fetchTransactions(stock.id);
+            NavigationService.instance
+                .navigateTo(StockDetailsView(stock: stock));
+          },
+        );
+      },
+      child: Slidable(
+        key: Key(stock.id),
+        endActionPane: _buildSlidableActions(context, stock),
+        child: Container(
+          padding: PaddingConstants.allMedium,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: AppColors.white,
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: context.primary.withValues(alpha: 0.1),
+                radius: 20,
+                child: _getStockIcon(context, 'stock'),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Helper(
+                      text: stock.name,
+                      overflow: true,
+                      isBold: true,
+                    ),
+                    Label(
+                      text: stock.abbreviation,
+                      overflow: true,
+                      fontSize: 12,
+                      color: AppColors.black54,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Helper(
-                        text: stock.name,
-                        overflow: true,
-                        isBold: true,
-                      ),
-                      Label(
-                        text: stock.abbreviation,
-                        overflow: true,
-                        fontSize: 12,
-                        color: AppColors.black54,
-                      ),
-                    ],
-                  ),
+              ),
+              if (totalQuantity > 0)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Helper(
+                      text: averagePrice.toPrice(),
+                      color: context.onSurface,
+                      overflow: true,
+                      isBold: true,
+                    ),
+                    Label(
+                      text: 'Toplam: ${totalValue.toPrice()}',
+                      color: context.onSurface.withValues(alpha: 0.7),
+                      overflow: true,
+                      fontSize: 12,
+                    ),
+                    Label(
+                      text: 'Adet: $totalQuantity',
+                      color: context.onSurface.withValues(alpha: 0.5),
+                      overflow: true,
+                      fontSize: 10,
+                    ),
+                  ],
                 ),
-                if (totalQuantity > 0)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Helper(
-                        text: averagePrice.toPrice(),
-                        color: context.onSurface,
-                        overflow: true,
-                        isBold: true,
-                      ),
-                      Label(
-                        text: 'Toplam: ${totalValue.toPrice()}',
-                        color: context.onSurface.withValues(alpha: 0.7),
-                        overflow: true,
-                        fontSize: 12,
-                      ),
-                      Label(
-                        text: 'Adet: $totalQuantity',
-                        color: context.onSurface.withValues(alpha: 0.5),
-                        overflow: true,
-                        fontSize: 10,
-                      ),
-                    ],
-                  ),
-                context.spacerWidthFixed(8),
-                if (stock.transactions.isNotEmpty)
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    color: context.onSurface.withValues(alpha: 0.1),
-                  ),
-                if (stock.transactions.isEmpty)
-                  Icon(
-                    Icons.add,
-                    size: 30,
-                    color: context.onSurface.withValues(alpha: 0.1),
-                  ),
-              ],
-            ),
+              context.spacerWidthFixed(8),
+              if (stock.transactions.isNotEmpty)
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: context.onSurface.withValues(alpha: 0.1),
+                ),
+              if (stock.transactions.isEmpty)
+                Icon(
+                  Icons.add,
+                  size: 30,
+                  color: context.onSurface.withValues(alpha: 0.1),
+                ),
+            ],
           ),
         ),
       ),
@@ -232,17 +301,28 @@ class _PortfolioViewState extends State<PortfolioView> with SingleTickerProvider
       motion: const ScrollMotion(),
       children: [
         SlidableAction(
-          onPressed: (context) => _onPressedEdit(context, stock),
+          onPressed: (context) {
+            DebounceService().execute(
+              'edit_stock_${stock.id}',
+              () => _onPressedEdit(context, stock),
+            );
+          },
           backgroundColor: context.primary,
           foregroundColor: AppColors.white,
           icon: Icons.edit,
         ),
         SlidableAction(
-          onPressed: (context) => _onPressedDelete(context, stock),
+          onPressed: (context) {
+            DebounceService().execute(
+              'delete_stock_${stock.id}',
+              () => _onPressedDelete(context, stock),
+            );
+          },
           backgroundColor: context.error,
           foregroundColor: AppColors.white,
           icon: Icons.delete,
-          borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
+          borderRadius:
+              const BorderRadius.horizontal(right: Radius.circular(8)),
         ),
       ],
     );
@@ -260,10 +340,12 @@ class _PortfolioViewState extends State<PortfolioView> with SingleTickerProvider
 
   void _onPressedDelete(BuildContext context, StockModel stock) async {
     // Global context'i NavigationService üzerinden al - bu daha uzun ömürlü
-    final globalContext = NavigationService.instance.navigatorKey.currentContext;
+    final globalContext =
+        NavigationService.instance.navigatorKey.currentContext;
 
     // Silmeden önce ViewModel referanslarını al
-    final portfolioViewModel = Provider.of<PortfolioViewModel>(context, listen: false);
+    final portfolioViewModel =
+        Provider.of<PortfolioViewModel>(context, listen: false);
     HomeViewModel? homeViewModel;
     StockViewModel? stockViewModel;
 
@@ -299,10 +381,6 @@ class _PortfolioViewState extends State<PortfolioView> with SingleTickerProvider
         }
 
         portfolioViewModel.refreshStocks();
-
-        if (stockViewModel != null) {
-          stockViewModel.fetchStocks();
-        }
 
         // Başarı mesajını göster - global context'i kullan
         if (globalContext != null && globalContext.mounted) {

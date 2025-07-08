@@ -20,7 +20,8 @@ class AddStockView extends StatelessWidget {
   Widget build(BuildContext context) {
     if (stock != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Provider.of<StockViewModel>(context, listen: false).setupForEdit(stock!);
+        Provider.of<StockViewModel>(context, listen: false)
+            .setupForEdit(stock!);
       });
     }
 
@@ -75,15 +76,20 @@ class AddStockView extends StatelessWidget {
     FocusNode nameFocusNode = FocusNode();
     FocusNode abbreviationFocusNode = FocusNode();
     FocusNode dividendsFocusNode = FocusNode();
+    FocusNode currentPriceFocusNode = FocusNode();
 
     return Padding(
       padding: PaddingConstants.pagePadding,
       child: Column(
         spacing: 16,
         children: [
-          _buildNameField(viewModel, context, nameFocusNode, abbreviationFocusNode),
-          _buildAbbreviationField(viewModel, context, abbreviationFocusNode, dividendsFocusNode),
-          _buildDividendsField(viewModel, context, dividendsFocusNode),
+          _buildNameField(
+              viewModel, context, nameFocusNode, abbreviationFocusNode),
+          _buildAbbreviationField(
+              viewModel, context, abbreviationFocusNode, dividendsFocusNode),
+          _buildDividendsField(
+              viewModel, context, dividendsFocusNode, currentPriceFocusNode),
+          _buildCurrentPriceField(viewModel, context, currentPriceFocusNode),
         ],
       ),
     );
@@ -91,10 +97,12 @@ class AddStockView extends StatelessWidget {
 
   Widget _buildButton(BuildContext context, StockViewModel viewModel) {
     return Padding(
-      padding: PaddingConstants.symmetricHorizontalMedium + PaddingConstants.onlyBottomMedium,
+      padding: PaddingConstants.symmetricHorizontalMedium +
+          PaddingConstants.onlyBottomMedium,
       child: viewModel.isLoading
           ? const CircularProgressIndicator()
           : GeneralButton(
+              debounceKey: 'add_stock_button',
               onPressed: () {
                 if (viewModel.nameController.text.isEmpty) {
                   showDialog(
@@ -122,59 +130,7 @@ class AddStockView extends StatelessWidget {
                   return;
                 }
 
-                // Temettü alanının boş olmasını engelleyelim, 0 girilebilir
-                final dividendsText = viewModel.dividendsController.text;
-                if (dividendsText.isEmpty) {
-                  // Eğer boşsa 0 olarak ayarlayalım
-                  viewModel.dividendsController.text = "0";
-                } else {
-                  // CurrencyInputFormatter, sayıyı "₺1.234,56" formatında gösterir
-                  // Bunu parse ederken önce para birimi sembolünü kaldırmalı,
-                  // sonra binlik ayırıcıları kaldırmalı, ve virgülü noktaya çevirmeliyiz
-                  String normalizedText = dividendsText
-                      .replaceAll('₺', '') // TL sembolünü kaldır
-                      .replaceAll('.', '') // Binlik ayraçları kaldır
-                      .trim() // Boşlukları kaldır
-                      .replaceAll(',', '.'); // Virgülü nokta ile değiştir
-
-                  print("DEBUG VIEW: Normalize edilmiş temettü metni: '$normalizedText'");
-
-                  double? dividendValue;
-                  try {
-                    dividendValue = double.parse(normalizedText);
-                    print("DEBUG VIEW: Parse edilen temettü değeri: $dividendValue");
-                  } catch (e) {
-                    print("DEBUG VIEW: Parse hatası: $e");
-                    dividendValue = null;
-                  }
-
-                  if (dividendValue == null) {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) => SuccessDialog(
-                        message: 'Temettü değeri geçerli bir sayı değil!',
-                        icon: Icons.error_outline_rounded,
-                        backgroundColor: AppColors.error,
-                      ),
-                    );
-                    return;
-                  }
-
-                  if (dividendValue < 0) {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) => SuccessDialog(
-                        message: 'Temettü değeri negatif olamaz!',
-                        icon: Icons.error_outline_rounded,
-                        backgroundColor: AppColors.error,
-                      ),
-                    );
-                    return;
-                  }
-                }
-
+                // Temettü alanı validation - kullanıcı boş bırakabilir
                 viewModel.addStock(context).then((result) {
                   if (result['success']) {
                     // Başarı dialogunu doğrudan mevcut context'te göster
@@ -193,29 +149,37 @@ class AddStockView extends StatelessWidget {
 
                     // Refresh the stocks list in all related ViewModels
                     try {
-                      print("DEBUG VIEW: StockViewModel.fetchStocks çağrılıyor");
-                      Provider.of<StockViewModel>(context, listen: false).fetchStocks();
+                      print(
+                          "DEBUG VIEW: StockViewModel.fetchStocks çağrılıyor");
+                      Provider.of<StockViewModel>(context, listen: false)
+                          .fetchStocks();
                     } catch (e) {
-                      print('DEBUG VIEW ERROR: StockViewModel güncellenemedi: $e');
+                      print(
+                          'DEBUG VIEW ERROR: StockViewModel güncellenemedi: $e');
                     }
 
                     try {
                       print("DEBUG VIEW: HomeViewModel.fetchStocks çağrılıyor");
-                      Provider.of<HomeViewModel>(context, listen: false).fetchStocks();
+                      Provider.of<HomeViewModel>(context, listen: false)
+                          .fetchStocks();
                     } catch (e) {
-                      print('DEBUG VIEW ERROR: HomeViewModel güncellenemedi: $e');
+                      print(
+                          'DEBUG VIEW ERROR: HomeViewModel güncellenemedi: $e');
                     }
 
                     // Dialog gösterdikten sonra bekleme süresi
-                    print("DEBUG VIEW: Navigator.pop için Future.delayed başlatılıyor");
+                    print(
+                        "DEBUG VIEW: Navigator.pop için Future.delayed başlatılıyor");
                     Future.delayed(const Duration(milliseconds: 1500), () {
-                      print("DEBUG VIEW: İlk Future.delayed tamamlandı, Dialog kapatılıyor");
+                      print(
+                          "DEBUG VIEW: İlk Future.delayed tamamlandı, Dialog kapatılıyor");
                       // Önce dialog'u kapat
                       Navigator.of(context).pop();
 
                       // Kısa bir bekleme sonrası ana sayfaya dön
                       Future.delayed(const Duration(milliseconds: 100), () {
-                        print("DEBUG VIEW: İkinci Future.delayed tamamlandı, Ana sayfaya dönülüyor");
+                        print(
+                            "DEBUG VIEW: İkinci Future.delayed tamamlandı, Ana sayfaya dönülüyor");
                         Navigator.of(context).pop();
                       });
                     });
@@ -253,8 +217,8 @@ class AddStockView extends StatelessWidget {
     );
   }
 
-  Widget _buildNameField(
-      StockViewModel viewModel, BuildContext context, FocusNode nameFocusNode, FocusNode abbreviationFocusNode) {
+  Widget _buildNameField(StockViewModel viewModel, BuildContext context,
+      FocusNode nameFocusNode, FocusNode abbreviationFocusNode) {
     return TextField(
       controller: viewModel.nameController,
       focusNode: nameFocusNode,
@@ -265,8 +229,8 @@ class AddStockView extends StatelessWidget {
     );
   }
 
-  Widget _buildAbbreviationField(
-      StockViewModel viewModel, BuildContext context, FocusNode abbreviationFocusNode, FocusNode dividendsFocusNode) {
+  Widget _buildAbbreviationField(StockViewModel viewModel, BuildContext context,
+      FocusNode abbreviationFocusNode, FocusNode dividendsFocusNode) {
     return TextField(
       controller: viewModel.abbreviationController,
       focusNode: abbreviationFocusNode,
@@ -277,13 +241,56 @@ class AddStockView extends StatelessWidget {
     );
   }
 
-  Widget _buildDividendsField(StockViewModel viewModel, BuildContext context, FocusNode dividendsFocusNode) {
+  Widget _buildDividendsField(StockViewModel viewModel, BuildContext context,
+      FocusNode dividendsFocusNode, FocusNode currentPriceFocusNode) {
     return TextField(
       controller: viewModel.dividendsController,
       focusNode: dividendsFocusNode,
-      decoration: const InputDecoration(labelText: 'Temettü Miktarını Girin (örn: 0,50)'),
-      keyboardType: TextInputType.number,
-      inputFormatters: [CurrencyInputFormatter()],
+      decoration: InputDecoration(
+        labelText: 'Temettü Miktarı',
+        hintText: '0,5000 veya 2,75',
+        suffixText: '₺',
+        suffixStyle: TextStyle(
+          color: context.primary,
+          fontWeight: FontWeight.bold,
+        ),
+        hintStyle: TextStyle(
+          color: Colors.grey.withOpacity(0.6),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: context.primary, width: 2),
+        ),
+      ),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [PriceInputFormatter()],
+      onSubmitted: (_) {
+        FocusScope.of(context).requestFocus(currentPriceFocusNode);
+      },
+    );
+  }
+
+  Widget _buildCurrentPriceField(StockViewModel viewModel, BuildContext context,
+      FocusNode currentPriceFocusNode) {
+    return TextField(
+      controller: viewModel.currentPriceController,
+      focusNode: currentPriceFocusNode,
+      decoration: InputDecoration(
+        labelText: 'Güncel Fiyat',
+        hintText: '127,75 veya 25,4500',
+        suffixText: '₺',
+        suffixStyle: TextStyle(
+          color: context.primary,
+          fontWeight: FontWeight.bold,
+        ),
+        hintStyle: TextStyle(
+          color: Colors.grey.withOpacity(0.6),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: context.primary, width: 2),
+        ),
+      ),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [PriceInputFormatter()],
       onSubmitted: (_) {
         FocusScope.of(context).unfocus(); // Dismiss the keyboard
       },

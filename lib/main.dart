@@ -11,7 +11,15 @@ import 'package:vilsa/features/splash/view/splash_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
+
+  // Load .env file if it exists
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    // .env file is optional, continue without it
+    print('No .env file found, continuing without environment variables');
+  }
+
   await initializeDateFormatting('tr', null);
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -36,7 +44,7 @@ class MyApp extends StatelessWidget {
       title: 'Vilsa',
       theme: LightTheme.theme,
       debugShowCheckedModeBanner: false,
-      home: const SplashView(),
+      home: SplashView(),
       navigatorKey: NavigationService.instance.navigatorKey,
     );
   }

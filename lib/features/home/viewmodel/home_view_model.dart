@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:vilsa/core/base/base_view_model.dart';
-import 'package:vilsa/core/init/event/event_bus.dart';
-import 'package:vilsa/core/init/event/event_type_enum.dart';
-import 'package:vilsa/core/init/network/data_service.dart';
-import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
-import 'package:vilsa/features/home/model/chart_data_point_model.dart';
 import 'package:vilsa/core/enums/chart_display_mode_enum.dart';
 import 'package:vilsa/core/enums/chart_type_enum.dart';
 import 'package:vilsa/core/enums/stock_filter_type_enum.dart';
 import 'package:vilsa/core/enums/stock_sort_type_enum.dart';
+import 'package:vilsa/core/init/navigation/navigation_service.dart';
+import 'package:vilsa/core/init/network/data_service.dart';
+import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
+import 'package:vilsa/features/home/model/chart_data_point_model.dart';
 import 'package:vilsa/features/stock/model/stock_model.dart';
+import 'package:vilsa/features/stock_details/view/stock_details_view.dart';
 
 /// ViewModel to manage home screen data and operations
 class HomeViewModel extends BaseViewModel {
@@ -18,7 +18,8 @@ class HomeViewModel extends BaseViewModel {
 
   List<StockModel> _stocks = [];
   List<TransactionModel> _allTransactions = [];
-  TextEditingController searchController = TextEditingController(); // Search controller
+  TextEditingController searchController =
+      TextEditingController(); // Search controller
 
   // Default date range: one year ago to today
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 365 * 2));
@@ -60,19 +61,6 @@ class HomeViewModel extends BaseViewModel {
   HomeViewModel() {
     init();
     searchController.addListener(_onSearchChanged);
-
-    // Listen for stock events
-    EventBus.instance.on(EventType.stockAdded).listen((_) {
-      fetchStocksWithTransactions();
-    });
-
-    EventBus.instance.on(EventType.stockUpdated).listen((_) {
-      fetchStocksWithTransactions();
-    });
-
-    EventBus.instance.on(EventType.stockDeleted).listen((_) {
-      fetchStocksWithTransactions();
-    });
   }
 
   void _onSearchChanged() {
@@ -110,33 +98,24 @@ class HomeViewModel extends BaseViewModel {
   /// Get transactions filtered by the selected date range
   List<TransactionModel> get filteredTransactions {
     return _allTransactions.where((transaction) {
-      return transaction.date.isAfter(_startDate) && transaction.date.isBefore(_endDate.add(const Duration(days: 1)));
+      return transaction.date.isAfter(_startDate) &&
+          transaction.date.isBefore(_endDate.add(const Duration(days: 1)));
     }).toList();
   }
 
   /// Calculate the total balance from filtered transactions
   double get totalBalance {
     return filteredTransactions.fold(0.0, (total, transaction) {
-      return total + (transaction.price * transaction.quantity);
+      final transactionValue = transaction.price * transaction.quantity;
+      return total + transactionValue;
     });
   }
 
-  /// Calculate the total dividends from filtered transactions
+  /// Calculate total dividends using new dividend system
   double get totalDividends {
-    // İşlemlerdeki temettüleri topla
-    double transactionDividends = filteredTransactions.fold(0.0, (total, transaction) {
-      return total + transaction.dividends;
-    });
-
-    // Hisse temettülerini topla
-    double stockDividends = _stocks.fold(0.0, (total, stock) {
-      // Her hisse için toplam adet hesapla
-      int totalQuantity = stock.transactions.fold(0, (sum, tx) => sum + tx.quantity);
-      // Adet başına temettü ile toplam adet çarpımını ekle
-      return total + (stock.dividends * totalQuantity);
-    });
-
-    return transactionDividends + stockDividends;
+    // This will be calculated by fetching all dividends within date range
+    // For now, return 0 as we'll implement async calculation if needed
+    return 0.0; // Placeholder - could be made async if needed
   }
 
   /// Get the total investment amount (sum of buy transactions)
@@ -154,7 +133,8 @@ class HomeViewModel extends BaseViewModel {
     double value = 0.0;
     for (var stock in _stocks) {
       // Calculate total quantity owned
-      int totalQuantity = stock.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+      int totalQuantity =
+          stock.transactions.fold(0, (sum, tx) => sum + tx.quantity);
       value += totalQuantity * stock.currentPrice;
     }
     return value;
@@ -171,14 +151,10 @@ class HomeViewModel extends BaseViewModel {
     return (totalProfitLoss / totalInvestment) * 100;
   }
 
-  /// Calculate total annual dividends
+  /// Calculate total annual dividends using new dividend system
   double get totalAnnualDividends {
-    return _stocks.fold(0.0, (total, stock) {
-      // Calculate total quantity owned
-      int totalQuantity = stock.transactions.fold(0, (sum, tx) => sum + tx.quantity);
-      // Annual dividend per share * quantity
-      return total + (stock.dividends * totalQuantity);
-    });
+    // Placeholder for new dividend system calculation
+    return 0.0; // Could be made async if needed
   }
 
   /// Calculate dividend yield percentage
@@ -209,23 +185,14 @@ class HomeViewModel extends BaseViewModel {
   /// Get recent transactions sorted by date
   List<TransactionModel> get recentTransactions {
     List<TransactionModel> sorted = List.from(_allTransactions);
-    sorted.sort((a, b) => b.date.compareTo(a.date)); // Descending order (newest first)
+    sorted.sort(
+        (a, b) => b.date.compareTo(a.date)); // Descending order (newest first)
     return sorted;
-  }
-
-  /// Navigate to transactions screen
-  void navigateToTransactions(BuildContext context) {
-    Navigator.pushNamed(context, '/transactions');
-  }
-
-  /// Navigate to portfolio screen
-  void navigateToPortfolio(BuildContext context) {
-    Navigator.pushNamed(context, '/portfolio');
   }
 
   /// Navigate to stock details screen
   void navigateToStockDetails(BuildContext context, StockModel stock) {
-    Navigator.pushNamed(context, '/stock-details', arguments: stock);
+    NavigationService.instance.navigateTo(StockDetailsView(stock: stock));
   }
 
   /// Set the date range for data filtering
@@ -298,14 +265,17 @@ class HomeViewModel extends BaseViewModel {
     if (searchController.text.isNotEmpty) {
       final searchTerm = searchController.text.toLowerCase();
       searchFiltered = _stocks.where((stock) {
-        return stock.name.toLowerCase().contains(searchTerm) || stock.abbreviation.toLowerCase().contains(searchTerm);
+        return stock.name.toLowerCase().contains(searchTerm) ||
+            stock.abbreviation.toLowerCase().contains(searchTerm);
       }).toList();
     }
 
     // Sonra tür filtrelemesi yap
     List<StockModel> filtered = switch (_stockFilterType) {
-      StockFilterTypeEnum.traded => searchFiltered.where((stock) => stock.transactions.isNotEmpty).toList(),
-      StockFilterTypeEnum.untraded => searchFiltered.where((stock) => stock.transactions.isEmpty).toList(),
+      StockFilterTypeEnum.traded =>
+        searchFiltered.where((stock) => stock.transactions.isNotEmpty).toList(),
+      StockFilterTypeEnum.untraded =>
+        searchFiltered.where((stock) => stock.transactions.isEmpty).toList(),
       StockFilterTypeEnum.all => searchFiltered,
     };
 
@@ -315,22 +285,28 @@ class HomeViewModel extends BaseViewModel {
         case StockSortTypeEnum.alphabetical:
           return a.name.compareTo(b.name);
         case StockSortTypeEnum.quantity:
-          int quantityA = a.transactions.fold(0, (sum, tx) => sum + tx.quantity);
-          int quantityB = b.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+          int quantityA =
+              a.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+          int quantityB =
+              b.transactions.fold(0, (sum, tx) => sum + tx.quantity);
           return quantityB.compareTo(quantityA); // Büyükten küçüğe
         case StockSortTypeEnum.totalValue:
-          int quantityA = a.transactions.fold(0, (sum, tx) => sum + tx.quantity);
-          int quantityB = b.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+          int quantityA =
+              a.transactions.fold(0, (sum, tx) => sum + tx.quantity);
+          int quantityB =
+              b.transactions.fold(0, (sum, tx) => sum + tx.quantity);
           double valueA = quantityA * a.currentPrice;
           double valueB = quantityB * b.currentPrice;
           return valueB.compareTo(valueA); // Büyükten küçüğe
         case StockSortTypeEnum.averagePrice:
           double avgPriceA = a.transactions.isEmpty
               ? 0
-              : a.transactions.fold(0.0, (sum, tx) => sum + tx.price) / a.transactions.length;
+              : a.transactions.fold(0.0, (sum, tx) => sum + tx.price) /
+                  a.transactions.length;
           double avgPriceB = b.transactions.isEmpty
               ? 0
-              : b.transactions.fold(0.0, (sum, tx) => sum + tx.price) / b.transactions.length;
+              : b.transactions.fold(0.0, (sum, tx) => sum + tx.price) /
+                  b.transactions.length;
           return avgPriceB.compareTo(avgPriceA); // Büyükten küçüğe
       }
     });

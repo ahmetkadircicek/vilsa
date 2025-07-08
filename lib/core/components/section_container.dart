@@ -29,7 +29,8 @@ class SectionContainer extends StatefulWidget {
   State<SectionContainer> createState() => _SectionContainerState();
 }
 
-class _SectionContainerState extends State<SectionContainer> with SingleTickerProviderStateMixin {
+class _SectionContainerState extends State<SectionContainer>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -79,7 +80,8 @@ class _SectionContainerState extends State<SectionContainer> with SingleTickerPr
             color: context.onPrimary,
             borderRadius: GeneralConstants.instance.borderRadius,
             border: Border.all(
-              color: widget.borderColor ?? context.secondary.withValues(alpha: 0.2),
+              color: widget.borderColor ??
+                  context.secondary.withValues(alpha: 0.2),
             ),
             boxShadow: widget.showShadow
                 ? [
@@ -97,9 +99,11 @@ class _SectionContainerState extends State<SectionContainer> with SingleTickerPr
               // Başlık kısmı
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: widget.headerColor ?? context.primary.withValues(alpha: 0.1),
+                  color: widget.headerColor ??
+                      context.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.only(
                     topLeft: GeneralConstants.instance.borderRadius.topLeft,
                     topRight: GeneralConstants.instance.borderRadius.topRight,
@@ -152,7 +156,8 @@ class SectionWithRows extends StatefulWidget {
   State<SectionWithRows> createState() => _SectionWithRowsState();
 }
 
-class _SectionWithRowsState extends State<SectionWithRows> with SingleTickerProviderStateMixin {
+class _SectionWithRowsState extends State<SectionWithRows>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -258,7 +263,8 @@ class ChartSectionContainer extends StatefulWidget {
   State<ChartSectionContainer> createState() => _ChartSectionContainerState();
 }
 
-class _ChartSectionContainerState extends State<ChartSectionContainer> with SingleTickerProviderStateMixin {
+class _ChartSectionContainerState extends State<ChartSectionContainer>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;

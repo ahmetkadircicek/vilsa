@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:vilsa/core/components/custom_date_picker.dart';
 import 'package:vilsa/core/components/general_button.dart';
 import 'package:vilsa/core/components/general_text.dart';
+import 'package:vilsa/core/components/section_container.dart'
+    show SectionContainer;
 import 'package:vilsa/core/constants/general_constants.dart';
 import 'package:vilsa/core/constants/padding_constants.dart';
 import 'package:vilsa/core/extensions/context_extension.dart';
@@ -36,18 +38,9 @@ class _AddTransactionViewState extends State<AddTransactionView> {
 
     // Eğer düzenleme modundaysak form alanlarını doldur
     if (widget.transaction != null) {
-      final transaction = widget.transaction!;
-      viewModel.priceController.text = transaction.price.toString();
-      viewModel.quantityController.text = transaction.quantity.toString();
-      viewModel.dividendsController.text = transaction.dividends > 0 ? transaction.dividends.toString() : '';
-      viewModel.noteController.text = transaction.note;
-
-      // Build tamamlandıktan sonra setSelectedDate çağrılsın
-      Future.microtask(() {
-        viewModel.setSelectedDate(transaction.date);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        viewModel.setTransactionToEdit(widget.transaction!);
       });
-
-      viewModel.stockId = transaction.stockId;
     }
   }
 
@@ -60,7 +53,9 @@ class _AddTransactionViewState extends State<AddTransactionView> {
           return SafeArea(
             child: Column(
               children: [
-                Expanded(child: SingleChildScrollView(child: _buildAddForm(viewModel, context))),
+                Expanded(
+                    child: SingleChildScrollView(
+                        child: _buildAddForm(viewModel, context))),
                 _buildButton(context, viewModel),
               ],
             ),
@@ -80,24 +75,27 @@ class _AddTransactionViewState extends State<AddTransactionView> {
           viewModel.resetForm();
         },
       ),
-      title: Highlight(text: widget.transaction != null ? 'Düzenle' : 'Ekle', color: Colors.white),
+      title: Highlight(
+          text: widget.transaction != null ? 'Düzenle' : 'Ekle',
+          color: Colors.white),
     );
   }
 
-  Widget _buildAddForm(AddTransactionViewModel viewModel, BuildContext context) {
+  Widget _buildAddForm(
+      AddTransactionViewModel viewModel, BuildContext context) {
     return SingleChildScrollView(
       child: Column(
         children: [
-          _buildBalanceSection(context),
           Padding(
-            padding: PaddingConstants.symmetricHorizontalMedium + PaddingConstants.onlyTopMedium,
+            padding: PaddingConstants.symmetricHorizontalMedium +
+                PaddingConstants.onlyTopMedium,
             child: Column(
               spacing: 16,
               children: [
+                _buildMarketItem(context),
                 _buildDateRangePicker(context, viewModel),
                 _buildPriceField(viewModel, context),
                 _buildQuantityField(viewModel, context),
-                _buildDividendsField(viewModel, context),
                 _buildNoteField(viewModel, context),
               ],
             ),
@@ -116,8 +114,9 @@ class _AddTransactionViewState extends State<AddTransactionView> {
           PaddingConstants.onlyBottomMedium +
           PaddingConstants.onlyTopSmall,
       child: GeneralButton(
+        debounceKey: 'add_transaction_button',
         onPressed: () async {
-          final transaction = await viewModel.sendData(
+          await viewModel.sendData(
             widget.stock,
             context: context,
             existingTransaction: widget.transaction,
@@ -133,56 +132,44 @@ class _AddTransactionViewState extends State<AddTransactionView> {
     );
   }
 
-  Widget _buildBalanceSection(BuildContext context) {
-    return Container(
-      width: context.width,
-      decoration: BoxDecoration(
-        color: context.primary,
-        borderRadius: BorderRadius.only(
-          bottomLeft: GeneralConstants.instance.borderRadius.bottomLeft,
-          bottomRight: GeneralConstants.instance.borderRadius.bottomRight,
-        ),
-      ),
-      padding: PaddingConstants.symmetricHorizontalMedium + PaddingConstants.onlyBottomLarge,
-      child: Column(
-        spacing: 24,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildMarketItem(context),
-        ],
-      ),
-    );
-  }
-
   Widget _buildMarketItem(BuildContext context) {
-    return Container(
-      margin: PaddingConstants.onlyBottomSmall,
-      decoration: BoxDecoration(
-        borderRadius: GeneralConstants.instance.borderRadius,
-        color: context.onSurface.withValues(alpha: 0.1),
+    return SectionContainer(
+      title: Label(
+        text: "Hisse Bilgileri",
+        isBold: true,
+        fontSize: 14,
+        color: context.primary,
       ),
-      padding: PaddingConstants.allSmall,
-      child: Row(
-        spacing: 8,
+      content: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: context.secondary.withValues(alpha: 0.3),
-            child: Icon(Icons.wallet, color: context.onSecondary, size: 30),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: context.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.trending_up,
+              color: context.primary,
+              size: 24,
+            ),
           ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Helper(
                   text: widget.stock.name,
-                  color: context.surface,
                   isBold: true,
-                  overflow: true,
+                  fontSize: 16,
+                  color: context.onSurface,
                 ),
+                const SizedBox(height: 4),
                 Label(
                   text: widget.stock.abbreviation,
-                  overflow: true,
-                  color: context.surface.withValues(alpha: 0.8),
+                  color: context.onSurface.withValues(alpha: 0.7),
                 ),
               ],
             ),
@@ -192,66 +179,41 @@ class _AddTransactionViewState extends State<AddTransactionView> {
     );
   }
 
-  Widget _buildDateRangePicker(BuildContext context, AddTransactionViewModel viewModel) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.onPrimary,
-        borderRadius: GeneralConstants.instance.borderRadius,
-        border: Border.all(color: context.secondary.withValues(alpha: 0.2)),
+  Widget _buildDateRangePicker(
+      BuildContext context, AddTransactionViewModel viewModel) {
+    return SectionContainer(
+      title: Label(
+        text: "Tarih Seçimi",
+        isBold: true,
+        fontSize: 14,
+        color: context.primary,
       ),
-      padding: PaddingConstants.allSmall,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Label(text: 'İşlem Tarihi:'),
-          GestureDetector(
-            onTap: () => _selectDate(context, viewModel),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: context.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Content(
-                    text: DateFormat('dd/MM/yyyy').format(viewModel.selectedDate),
-                    color: context.onSurface,
-                    fontSize: 14,
-                  ),
-                  SizedBox(width: 4),
-                  Icon(Icons.calendar_today, size: 16, color: context.primary),
-                ],
-              ),
-            ),
-          ),
-        ],
+      content: CustomDatePicker(
+        title: 'İşlem Tarihi',
+        selectedDate: viewModel.selectedDate,
+        onDateSelected: (date) => viewModel.setSelectedDate(date),
+        firstDate: DateTime(2000),
+        lastDate: DateTime.now(),
       ),
     );
   }
 
-  Future<void> _selectDate(BuildContext context, AddTransactionViewModel viewModel) async {
-    final newDate = await showDatePicker(
-      context: context,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-      initialDate: viewModel.selectedDate,
-    );
-
-    if (newDate != null) {
-      viewModel.setSelectedDate(newDate);
-    }
-  }
-
-  Widget _buildPriceField(AddTransactionViewModel viewModel, BuildContext context) {
+  Widget _buildPriceField(
+      AddTransactionViewModel viewModel, BuildContext context) {
     return TextField(
-      inputFormatters: [CurrencyInputFormatter()],
+      inputFormatters: [PriceInputFormatter()],
       controller: viewModel.priceController,
-      keyboardType: TextInputType.number,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
       decoration: InputDecoration(
-        hintText: 'Alış fiyatını girin',
+        hintText: '27,65 veya 127,4500',
+        suffixText: '₺',
+        suffixStyle: TextStyle(
+          color: context.primary,
+          fontWeight: FontWeight.bold,
+        ),
         hintStyle: GoogleFonts.montserrat(
           letterSpacing: 1,
+          color: Colors.grey.withOpacity(0.6),
         ),
         filled: true,
         fillColor: context.surfaceContainer,
@@ -259,11 +221,16 @@ class _AddTransactionViewState extends State<AddTransactionView> {
           borderRadius: GeneralConstants.instance.borderRadius,
           borderSide: BorderSide.none,
         ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: GeneralConstants.instance.borderRadius,
+          borderSide: BorderSide(color: context.primary, width: 2),
+        ),
       ),
     );
   }
 
-  Widget _buildQuantityField(AddTransactionViewModel viewModel, BuildContext context) {
+  Widget _buildQuantityField(
+      AddTransactionViewModel viewModel, BuildContext context) {
     return TextField(
       controller: viewModel.quantityController,
       keyboardType: TextInputType.number,
@@ -282,27 +249,8 @@ class _AddTransactionViewState extends State<AddTransactionView> {
     );
   }
 
-  Widget _buildDividendsField(AddTransactionViewModel viewModel, BuildContext context) {
-    return TextField(
-      inputFormatters: [CurrencyInputFormatter()],
-      controller: viewModel.dividendsController,
-      keyboardType: TextInputType.number,
-      decoration: InputDecoration(
-        hintText: 'Temettü tutarını girin (opsiyonel)',
-        hintStyle: GoogleFonts.montserrat(
-          letterSpacing: 1,
-        ),
-        filled: true,
-        fillColor: context.surfaceContainer,
-        border: OutlineInputBorder(
-          borderRadius: GeneralConstants.instance.borderRadius,
-          borderSide: BorderSide.none,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNoteField(AddTransactionViewModel viewModel, BuildContext context) {
+  Widget _buildNoteField(
+      AddTransactionViewModel viewModel, BuildContext context) {
     return TextField(
       controller: viewModel.noteController,
       decoration: InputDecoration(

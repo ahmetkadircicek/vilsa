@@ -1,7 +1,7 @@
 import 'package:vilsa/features/stock/model/stock_model.dart';
 
 /// Transaction type enum
-enum TransactionType { buy, sell, dividend }
+enum TransactionType { buy, sell }
 
 /// Model representing a stock transaction with associated information
 class TransactionModel {
@@ -14,7 +14,6 @@ class TransactionModel {
   final DateTime date;
   final String note;
   final DateTime createDate;
-  final double dividends;
   final TransactionType type;
 
   TransactionModel({
@@ -27,7 +26,6 @@ class TransactionModel {
     required this.date,
     this.note = '',
     required this.createDate,
-    required this.dividends,
     this.type = TransactionType.buy,
   });
 
@@ -50,7 +48,6 @@ class TransactionModel {
       "date": date.toIso8601String(),
       "note": note,
       "createDate": createDate.toIso8601String(),
-      "dividends": dividends,
       "type": type.index,
     };
   }
@@ -90,16 +87,9 @@ class TransactionModel {
       quantity = int.tryParse(json["quantity"] as String) ?? 0;
     }
 
-    // Handle dividends safely
-    double dividends = 0.0;
-    if (json["dividends"] is num) {
-      dividends = (json["dividends"] as num).toDouble();
-    } else if (json["dividends"] is String) {
-      dividends = double.tryParse(json["dividends"] as String) ?? 0.0;
-    }
-
     // Transaction type
-    TransactionType transactionType = TransactionType.buy; // Varsayılan olarak alış işlemi
+    TransactionType transactionType =
+        TransactionType.buy; // Varsayılan olarak alış işlemi
     if (json["type"] is num) {
       final typeIndex = (json["type"] as num).toInt();
       if (typeIndex >= 0 && typeIndex < TransactionType.values.length) {
@@ -114,10 +104,12 @@ class TransactionModel {
       stock: stockModel,
       price: price,
       quantity: quantity,
-      date: json["date"] != null ? DateTime.parse(json["date"]) : DateTime.now(),
+      date:
+          json["date"] != null ? DateTime.parse(json["date"]) : DateTime.now(),
       note: note,
-      createDate: json["createDate"] != null ? DateTime.parse(json["createDate"]) : DateTime.now(),
-      dividends: dividends,
+      createDate: json["createDate"] != null
+          ? DateTime.parse(json["createDate"])
+          : DateTime.now(),
       type: transactionType,
     );
   }
@@ -133,7 +125,6 @@ class TransactionModel {
     DateTime? date,
     String? note,
     DateTime? createDate,
-    double? dividends,
     TransactionType? type,
   }) {
     return TransactionModel(
@@ -146,7 +137,6 @@ class TransactionModel {
       date: date ?? this.date,
       note: note ?? this.note,
       createDate: createDate ?? this.createDate,
-      dividends: dividends ?? this.dividends,
       type: type ?? this.type,
     );
   }

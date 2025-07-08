@@ -1,29 +1,28 @@
 import 'package:board_datetime_picker/board_datetime_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:vilsa/core/base/base_view_model.dart';
-import 'package:vilsa/core/components/general_text.dart';
 import 'package:vilsa/core/components/success_dialog.dart';
 import 'package:vilsa/core/constants/color_constants.dart';
-import 'package:vilsa/core/init/event/event_bus.dart';
-import 'package:vilsa/core/init/event/event_type_enum.dart';
+import 'package:vilsa/core/init/navigation/navigation_service.dart';
 import 'package:vilsa/core/init/network/stock_service.dart';
 import 'package:vilsa/core/init/network/transaction_service.dart';
 import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
+import 'package:vilsa/features/home/viewmodel/home_view_model.dart';
 import 'package:vilsa/features/stock/model/stock_model.dart';
+import 'package:vilsa/features/stock_details/viewmodel/stock_details_view_model.dart';
 
 /// ViewModel for adding or editing transactions
 class AddTransactionViewModel extends BaseViewModel {
   final TransactionService _transactionService = TransactionService.instance;
   final StockService _stockService = StockService.instance;
-  final EventBus _eventBus = EventBus.instance;
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
   final TextEditingController noteController = TextEditingController();
   final TextEditingController abbreviationController = TextEditingController();
-  final TextEditingController dividendsController = TextEditingController();
   final BoardDateTimeController controller = BoardDateTimeController();
   String? _stockId;
 
@@ -68,9 +67,9 @@ class AddTransactionViewModel extends BaseViewModel {
   /// Initialize with an existing transaction for editing
   void setTransactionToEdit(TransactionModel transaction) {
     transactionToEdit = transaction;
-    priceController.text = transaction.price.toString();
+    // Use clean format for editing
+    priceController.text = _formatForInput(transaction.price);
     quantityController.text = transaction.quantity.toString();
-    dividendsController.text = transaction.dividends.toString();
     noteController.text = transaction.note;
     selectedDate = transaction.date;
     selectedTime = TimeOfDay.fromDateTime(transaction.date);
@@ -80,6 +79,12 @@ class AddTransactionViewModel extends BaseViewModel {
     notifyListeners();
   }
 
+  /// Format double value for clean input (e.g., 27.65 -> "27,65")
+  String _formatForInput(double value) {
+    if (value == 0) return '';
+    return value.toString().replaceAll('.', ',');
+  }
+
   /// Reset form
   void resetForm() {
     nameController.clear();
@@ -87,7 +92,6 @@ class AddTransactionViewModel extends BaseViewModel {
     quantityController.clear();
     noteController.clear();
     abbreviationController.clear();
-    dividendsController.clear();
     selectedDate = DateTime.now();
     selectedTime = TimeOfDay.now();
     selectedStock = null;
@@ -97,21 +101,20 @@ class AddTransactionViewModel extends BaseViewModel {
   }
 
   /// Para birimini sayısal değere dönüştüren yardımcı metot
-  /// "₺1.234,56" gibi formatlı bir string'i 1234.56 double değerine dönüştürür
+  /// Clean format desteği: "27,65" -> 27.65, "1234,5678" -> 1234.5678
   double? parseCurrencyValue(String text, {bool allowZero = false}) {
     if (text.isEmpty) {
       return null;
     }
 
     try {
-      // Para birimi sembolünü ve binlik ayırıcılarını kaldır
-      String parsedText = text
-          .replaceAll('₺', '') // TL sembolünü kaldır
-          .replaceAll('.', '') // Binlik ayraçları kaldır
-          .trim() // Boşlukları kaldır
-          .replaceAll(',', '.'); // Virgülü nokta ile değiştir (ondalık ayırıcı)
+      // Temiz input format'ı: sadece sayı ve virgül/nokta
+      String cleanText = text.trim();
 
-      double value = double.parse(parsedText);
+      // Hem virgülü hem de noktayı destekle (input formatter nokta->virgül dönüştürür ama safety için)
+      String parseableText = cleanText.replaceAll(',', '.');
+
+      double value = double.parse(parseableText);
 
       // Sıfır kontrolü
       if (!allowZero && value <= 0) {
@@ -120,7 +123,6 @@ class AddTransactionViewModel extends BaseViewModel {
 
       return value;
     } catch (e) {
-      debugPrint("Currency parsing error: $e for value '$text'");
       return null;
     }
   }
@@ -139,7 +141,8 @@ class AddTransactionViewModel extends BaseViewModel {
           context: context,
           barrierDismissible: false,
           builder: (context) => SuccessDialog(
-            message: 'Fiyat alanı geçerli bir değer olmalı ve sıfırdan büyük olmalı',
+            message:
+                'Fiyat alanı geçerli bir değer olmalı ve sıfırdan büyük olmalı',
             icon: Icons.error_outline_rounded,
             backgroundColor: AppColors.error,
           ),
@@ -159,31 +162,13 @@ class AddTransactionViewModel extends BaseViewModel {
           context: context,
           barrierDismissible: false,
           builder: (context) => SuccessDialog(
-            message: 'Miktar alanı geçerli bir tam sayı olmalı ve sıfırdan büyük olmalı',
+            message:
+                'Miktar alanı geçerli bir tam sayı olmalı ve sıfırdan büyük olmalı',
             icon: Icons.error_outline_rounded,
             backgroundColor: AppColors.error,
           ),
         );
         return null;
-      }
-
-      // Temettü alanını kontrol et (isteğe bağlı)
-      double dividends = 0.0;
-      if (dividendsController.text.isNotEmpty) {
-        double? parsedDividends = parseCurrencyValue(dividendsController.text, allowZero: true);
-        if (parsedDividends == null || parsedDividends < 0) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => SuccessDialog(
-              message: 'Temettü alanı geçerli bir değer olmalı ve negatif olmamalı',
-              icon: Icons.error_outline_rounded,
-              backgroundColor: AppColors.error,
-            ),
-          );
-          return null;
-        }
-        dividends = parsedDividends;
       }
 
       // Eğer düzenleme yapılıyorsa, mevcut işlemi güncelle
@@ -200,43 +185,40 @@ class AddTransactionViewModel extends BaseViewModel {
         note: noteController.text,
         date: selectedDate,
         createDate: existingTransaction?.createDate ?? DateTime.now(),
-        dividends: dividends,
         type: selectedType,
       );
 
-      // Log the transaction data before saving
-      final isUpdate = existingTransaction != null;
-      debugPrint(
-          "${isUpdate ? '🔄 Updating' : '💹 Creating'} transaction: ID=${transaction.id}, Stock=${stock.name}, Price=$price, Quantity=$quantity, Dividends=$dividends");
-
       // Save to database
-      if (isUpdate) {
+      if (existingTransaction != null) {
         await _transactionService.update(transaction);
-
-        // İşlem güncellendi olayını yayınla
-        _eventBus.fireEvent(EventType.transactionUpdated, data: transaction);
       } else {
         await _transactionService.save(transaction);
-
-        // İşlem eklendi olayını yayınla
-        _eventBus.fireEvent(EventType.transactionAdded, data: transaction);
       }
+
+      // Update stocks after transaction is added
+      await loadStocks();
+
+      // Notify StockDetailsViewModel to refresh transactions
+      Provider.of<StockDetailsViewModel>(context, listen: false)
+          .fetchTransactions(stock.id);
+
+      Provider.of<HomeViewModel>(context, listen: false)
+          .fetchStocksWithTransactions();
 
       // Başarılı işlem dialogu göster
       if (context.mounted) {
         // İşlem türüne göre (Alım/Satım) ve işlem moduna göre (Ekleme/Güncelleme) mesaj oluştur
-        String actionText = selectedType == TransactionType.buy ? "alındı" : "satıldı";
-        if (isUpdate) {
+        String actionText =
+            selectedType == TransactionType.buy ? "alındı" : "satıldı";
+        if (existingTransaction != null) {
           actionText = "güncellendi";
         }
-
-        print("Dialog gösteriliyor: isUpdate=$isUpdate, stock=${stock.name}, stockId=${stock.id}");
 
         showDialog(
           context: context,
           barrierDismissible: false,
           builder: (context) => SuccessDialog(
-            message: isUpdate
+            message: existingTransaction != null
                 ? '${stock.name} işlemi başarıyla güncellendi!'
                 : '$quantity adet ${stock.name} hissesi başarıyla $actionText!',
             icon: Icons.check_circle_outline_rounded,
@@ -246,15 +228,10 @@ class AddTransactionViewModel extends BaseViewModel {
           ),
         );
 
-        // Dialog gösterdikten sonra bekleme süresi
-        Future.delayed(const Duration(milliseconds: 2500), () {
-          print("İşlem tamamlandı, ekran kapatılıyor");
-
-          // Context hala geçerli mi kontrol et
-          if (context.mounted) {
-            // Ana ekrana dön
-            Navigator.of(context).pop();
-          }
+        // Wait for the dialog to be shown
+        Future.delayed(const Duration(milliseconds: 2500), () async {
+          // Return to the previous screen
+          NavigationService.instance.goBack();
         });
       }
 
@@ -264,7 +241,6 @@ class AddTransactionViewModel extends BaseViewModel {
       quantityController.clear();
       noteController.clear();
       abbreviationController.clear();
-      dividendsController.clear();
 
       // Reset date
       selectedDate = DateTime.now();
@@ -272,7 +248,10 @@ class AddTransactionViewModel extends BaseViewModel {
       _stockId = null;
 
       return transaction;
-    }, errorPrefix: existingTransaction != null ? "Failed to update transaction" : "Failed to save transaction");
+    },
+        errorPrefix: existingTransaction != null
+            ? "Failed to update transaction"
+            : "Failed to save transaction");
   }
 
   @override
@@ -282,7 +261,6 @@ class AddTransactionViewModel extends BaseViewModel {
     quantityController.dispose();
     noteController.dispose();
     abbreviationController.dispose();
-    dividendsController.dispose();
     super.dispose();
   }
 }

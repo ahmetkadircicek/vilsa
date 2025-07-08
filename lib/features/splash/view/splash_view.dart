@@ -1,11 +1,8 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:vilsa/core/components/general_text.dart';
-import 'package:vilsa/core/constants/color_constants.dart';
+import 'package:provider/provider.dart';
 import 'package:vilsa/core/constants/padding_constants.dart';
 import 'package:vilsa/core/extensions/context_extension.dart';
-import 'package:vilsa/features/home/view/home_view.dart';
+import 'package:vilsa/features/splash/viewmodel/splash_viewmodel.dart';
 
 class SplashView extends StatefulWidget {
   const SplashView({super.key});
@@ -14,104 +11,105 @@ class SplashView extends StatefulWidget {
   State<SplashView> createState() => _SplashViewState();
 }
 
-class _SplashViewState extends State<SplashView> with SingleTickerProviderStateMixin {
+class _SplashViewState extends State<SplashView>
+    with SingleTickerProviderStateMixin {
+  // AnimationController for the scale and opacity
   late AnimationController _animationController;
+
+  // Animation for the scale
   late Animation<double> _scaleAnimation;
+
+  // Animation for the opacity
   late Animation<double> _opacityAnimation;
 
   @override
   void initState() {
     super.initState();
+
+    // Setting up the animations
     _setupAnimations();
-    _startTimer();
+
+    // Checking the connectivity and preloading the data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SplashViewModel>().checkConnectivityAndPreloadData(context);
+    });
   }
 
+  // Setting up the animations
   void _setupAnimations() {
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 4000),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+    // Scale animation for the image
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 120.0).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: Curves.easeInOut,
+        curve: const Interval(0.7, 1.0, curve: Curves.fastLinearToSlowEaseIn),
       ),
     );
 
+    // Opacity animation for the image
     _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: Interval(0.0, 0.65, curve: Curves.easeIn),
+        curve: const Interval(0.0, 0.25, curve: Curves.easeIn),
       ),
     );
 
+    // Forwarding the animation
     _animationController.forward();
-  }
-
-  void _startTimer() {
-    Timer(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeView()),
-        );
-      }
-    });
   }
 
   @override
   void dispose() {
+    // Disposing the animation controller
     _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Scaffold for the splash screen
     return Scaffold(
+      // Background color
       backgroundColor: context.primary,
+
+      // Safe area for the splash screen
       body: SafeArea(
         child: Padding(
+          // Padding for the splash screen
           padding: PaddingConstants.allMedium,
+
+          // Animation for the splash screen
           child: AnimatedBuilder(
+            // Animation controller for the scale and opacity
             animation: _animationController,
             builder: (context, child) {
+              // Center for the splash screen
               return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Spacer(), // Pushes the text to the bottom
+                // Opacity for the splash screen
+                child: Opacity(
+                  // Opacity for the splash screen
+                  opacity: _opacityAnimation.value,
 
-                    Opacity(
-                      opacity: _opacityAnimation.value,
-                      child: Transform.scale(
-                        scale: _scaleAnimation.value,
-                        child: Center(
-                          child: Image.asset(
-                            'assets/icon/app_icon.png',
-                            width: context.width * 0.8,
-                            height: context.width * 0.8,
-                          ),
-                        ),
-                      ),
+                  // Transform scale for the image
+                  child: Transform.scale(
+                    // Scale for the image
+                    scale: _scaleAnimation.value,
+
+                    // App icon
+                    child: Image.asset(
+                      'asset/icon/app_icon.png',
+
+                      // Width for the image
+                      width: context.width * 0.8,
+
+                      // Height for the image
+                      height: context.width * 0.8,
                     ),
-                    const Spacer(), // Pushes the text to the bottom
-                    Opacity(
-                      opacity: _opacityAnimation.value,
-                      child: Headline(
-                        text: 'Vilsa',
-                        color: AppColors.white,
-                        isCentred: true,
-                      ),
-                    ),
-                    Opacity(
-                      opacity: _opacityAnimation.value,
-                      child: Content(
-                        text: 'Finansal Yönetim',
-                        color: AppColors.white.withValues(alpha: 0.9),
-                        isCentred: true,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               );
             },

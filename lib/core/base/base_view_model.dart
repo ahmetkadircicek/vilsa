@@ -20,7 +20,6 @@ abstract class BaseViewModel extends ChangeNotifier {
   void setError(String message) {
     _hasError = true;
     _errorMessage = message;
-    _isLoading = false;
     notifyListeners();
     debugPrint("🚨 Error: $message");
   }
@@ -33,17 +32,19 @@ abstract class BaseViewModel extends ChangeNotifier {
   }
 
   /// Safely execute an async function with proper error handling and loading state
-  Future<T?> executeAsync<T>(Future<T> Function() action, {String? errorPrefix}) async {
+  Future<T?> executeAsync<T>(Future<T> Function() action,
+      {String? errorPrefix}) async {
     try {
       setLoading(true);
       clearError();
       final result = await action();
-      setLoading(false);
       return result;
     } catch (e) {
       final prefix = errorPrefix != null ? "$errorPrefix: " : "";
       setError("$prefix$e");
       return null;
+    } finally {
+      setLoading(false);
     }
   }
 }

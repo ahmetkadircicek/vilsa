@@ -5,6 +5,7 @@ import 'package:vilsa/core/constants/general_constants.dart';
 import 'package:vilsa/core/constants/padding_constants.dart';
 import 'package:vilsa/core/extensions/context_extension.dart';
 import 'package:vilsa/core/init/navigation/navigation_service.dart';
+import 'package:vilsa/core/init/network/debounce_service.dart';
 import 'package:vilsa/features/add_stock/view/add_stock_view.dart'; // Added import for AddStockView
 import 'package:vilsa/features/add_transaction/view/add_transaction_view.dart';
 import 'package:vilsa/features/stock/model/stock_model.dart';
@@ -44,8 +45,11 @@ class StockView extends StatelessWidget {
         IconButton(
           icon: Icon(Icons.add, color: context.onPrimary),
           onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const AddStockView()),
+            DebounceService().execute(
+              'add_stock_icon_button',
+              () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const AddStockView()),
+              ),
             );
           },
         ),
@@ -57,7 +61,11 @@ class StockView extends StatelessWidget {
   Widget _buildGeneralListTile(BuildContext context, StockModel stock) {
     return GestureDetector(
       onTap: () {
-        NavigationService.instance.navigateTo(AddTransactionView(stock: stock));
+        DebounceService().execute(
+          'stock_transaction_${stock.id}',
+          () => NavigationService.instance
+              .navigateTo(AddTransactionView(stock: stock)),
+        );
       },
       child: Container(
         margin: PaddingConstants.onlyBottomSmall,

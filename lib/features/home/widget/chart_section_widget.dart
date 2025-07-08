@@ -6,10 +6,11 @@ import 'package:vilsa/core/components/general_text.dart';
 import 'package:vilsa/core/components/section_container.dart';
 import 'package:vilsa/core/constants/color_constants.dart';
 import 'package:vilsa/core/constants/padding_constants.dart';
+import 'package:vilsa/core/enums/chart_type_enum.dart';
 import 'package:vilsa/core/extensions/context_extension.dart';
 import 'package:vilsa/core/extensions/price_formatter.dart';
+import 'package:vilsa/core/init/network/debounce_service.dart';
 import 'package:vilsa/features/home/model/chart_data_point_model.dart';
-import 'package:vilsa/core/enums/chart_type_enum.dart';
 import 'package:vilsa/features/home/viewmodel/home_view_model.dart';
 
 class ChartSectionWidget extends StatelessWidget {
@@ -53,19 +54,31 @@ class ChartSectionWidget extends StatelessWidget {
         IconButton(
           icon: Icon(
             Icons.bar_chart_rounded,
-            color:
-                viewModel.chartType == ChartTypeEnum.daily ? context.primary : context.onSurface.withValues(alpha: 0.5),
+            color: viewModel.chartType == ChartTypeEnum.daily
+                ? context.primary
+                : context.onSurface.withValues(alpha: 0.5),
           ),
-          onPressed: () => viewModel.setChartType(ChartTypeEnum.daily),
+          onPressed: () {
+            DebounceService().execute(
+              'chart_type_daily',
+              () => viewModel.setChartType(ChartTypeEnum.daily),
+            );
+          },
           tooltip: 'Günlük Değerler',
         ),
         IconButton(
           icon: Icon(
             Icons.trending_up_rounded,
-            color:
-                viewModel.chartType == ChartTypeEnum.total ? context.primary : context.onSurface.withValues(alpha: 0.5),
+            color: viewModel.chartType == ChartTypeEnum.total
+                ? context.primary
+                : context.onSurface.withValues(alpha: 0.5),
           ),
-          onPressed: () => viewModel.setChartType(ChartTypeEnum.total),
+          onPressed: () {
+            DebounceService().execute(
+              'chart_type_total',
+              () => viewModel.setChartType(ChartTypeEnum.total),
+            );
+          },
           tooltip: 'Toplam Değerler',
         ),
       ],
@@ -101,7 +114,8 @@ class ChartSectionWidget extends StatelessWidget {
                   final index = barSpot.x.toInt();
                   if (index >= 0 && index < chartData.length) {
                     final datePoint = chartData[index];
-                    final formattedDate = DateFormat('dd/MM/yy').format(datePoint.date);
+                    final formattedDate =
+                        DateFormat('dd/MM/yy').format(datePoint.date);
                     final value = viewModel.chartType == ChartTypeEnum.total
                         ? datePoint.value.toPrice()
                         : datePoint.value.toPrice();
@@ -136,7 +150,8 @@ class ChartSectionWidget extends StatelessWidget {
     );
   }
 
-  FlTitlesData _buildChartTitles(BuildContext context, List<ChartDataPoint> chartData) {
+  FlTitlesData _buildChartTitles(
+      BuildContext context, List<ChartDataPoint> chartData) {
     if (chartData.isEmpty) return FlTitlesData(show: false);
 
     return FlTitlesData(
@@ -153,7 +168,9 @@ class ChartSectionWidget extends StatelessWidget {
 
             DateTime date = chartData[index].date;
 
-            if (index == 0 || index == chartData.length - 1 || index == chartData.length ~/ 2) {
+            if (index == 0 ||
+                index == chartData.length - 1 ||
+                index == chartData.length ~/ 2) {
               return Padding(
                 padding: const EdgeInsets.only(top: 10),
                 child: Text(

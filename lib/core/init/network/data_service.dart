@@ -1,18 +1,13 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
 import 'package:vilsa/features/stock/model/stock_model.dart';
 
-import 'database_helper.dart';
 import 'stock_service.dart';
 import 'transaction_service.dart';
 
 /// Service to handle combined data operations and synchronization
 class DataService {
   static final DataService _instance = DataService._internal();
-  final DatabaseHelper _db = DatabaseHelper.instance;
   final StockService _stockService = StockService.instance;
   final TransactionService _transactionService = TransactionService.instance;
 
@@ -33,7 +28,8 @@ class DataService {
       }
 
       // Fetch all transactions
-      List<TransactionModel> allTransactions = await _transactionService.fetchAll();
+      List<TransactionModel> allTransactions =
+          await _transactionService.fetchAll();
 
       // If no transactions found, just return stocks
       if (allTransactions.isEmpty) {
@@ -63,7 +59,8 @@ class DataService {
 
         // Skip transactions without a valid stock reference
         if (stockId.isEmpty || !stockIds.containsKey(stockId)) {
-          debugPrint("⚠️ Skipping transaction ${transaction.id} - Invalid stockId: $stockId");
+          debugPrint(
+              "⚠️ Skipping transaction ${transaction.id} - Invalid stockId: $stockId");
           continue;
         }
 
@@ -79,7 +76,8 @@ class DataService {
       // Assign transactions to each stock
       List<StockModel> enrichedStocks = stocks.map((stock) {
         // Get transactions for this stock, or empty list if none found
-        List<TransactionModel> stockTransactions = transactionsByStock[stock.id] ?? [];
+        List<TransactionModel> stockTransactions =
+            transactionsByStock[stock.id] ?? [];
 
         // Sort transactions by date (newest first)
         stockTransactions.sort((a, b) => b.date.compareTo(a.date));
@@ -88,7 +86,8 @@ class DataService {
         return stock.copyWith(transactions: stockTransactions);
       }).toList();
 
-      debugPrint("🚀 Loaded ${enrichedStocks.length} stocks with ${allTransactions.length} transactions");
+      debugPrint(
+          "🚀 Loaded ${enrichedStocks.length} stocks with ${allTransactions.length} transactions");
       return enrichedStocks;
     } catch (e) {
       debugPrint("🚨 Error fetching stocks with transactions: $e");
@@ -105,11 +104,13 @@ class DataService {
       // Save each transaction
       for (var transaction in stock.transactions) {
         // Make sure transaction has the correct stockId
-        TransactionModel updatedTransaction = transaction.copyWith(stockId: stock.id);
+        TransactionModel updatedTransaction =
+            transaction.copyWith(stockId: stock.id);
         await _transactionService.save(updatedTransaction);
       }
 
-      debugPrint("🚀 Stock and ${stock.transactions.length} transactions saved successfully");
+      debugPrint(
+          "🚀 Stock and ${stock.transactions.length} transactions saved successfully");
     } catch (e) {
       debugPrint("🚨 Error saving stock with transactions: $e");
       throw Exception("Failed to save stock with transactions: $e");
@@ -133,17 +134,21 @@ class DataService {
   }
 
   /// Update a stock and manage its transactions
-  Future<void> updateStockWithTransactions(StockModel updatedStock, List<TransactionModel> originalTransactions) async {
+  Future<void> updateStockWithTransactions(StockModel updatedStock,
+      List<TransactionModel> originalTransactions) async {
     try {
       // Update the stock
       await _stockService.update(updatedStock);
 
       // Find transactions to add, update, or delete
-      Set<String> updatedTransactionIds = updatedStock.transactions.map((t) => t.id).toSet();
-      Set<String> originalTransactionIds = originalTransactions.map((t) => t.id).toSet();
+      Set<String> updatedTransactionIds =
+          updatedStock.transactions.map((t) => t.id).toSet();
+      Set<String> originalTransactionIds =
+          originalTransactions.map((t) => t.id).toSet();
 
       // Transactions to delete (in original but not in updated)
-      Set<String> transactionsToDelete = originalTransactionIds.difference(updatedTransactionIds);
+      Set<String> transactionsToDelete =
+          originalTransactionIds.difference(updatedTransactionIds);
 
       // Delete transactions that are no longer present
       for (String transactionId in transactionsToDelete) {
@@ -153,9 +158,11 @@ class DataService {
       // Add or update the current transactions
       for (var transaction in updatedStock.transactions) {
         // Ensure transaction has the correct stockId
-        TransactionModel updatedTransaction = transaction.copyWith(stockId: updatedStock.id);
+        TransactionModel updatedTransaction =
+            transaction.copyWith(stockId: updatedStock.id);
 
-        if (transaction.id.isEmpty || !originalTransactionIds.contains(transaction.id)) {
+        if (transaction.id.isEmpty ||
+            !originalTransactionIds.contains(transaction.id)) {
           // New transaction
           await _transactionService.save(updatedTransaction);
         } else {
@@ -164,63 +171,11 @@ class DataService {
         }
       }
 
-      debugPrint("🚀 Stock updated with ${updatedStock.transactions.length} transactions");
+      debugPrint(
+          "🚀 Stock updated with ${updatedStock.transactions.length} transactions");
     } catch (e) {
       debugPrint("🚨 Error updating stock with transactions: $e");
       throw Exception("Failed to update stock with transactions: $e");
-    }
-  }
-
-  /// Import sample data from a JSON file
-  Future<void> importSampleData(String jsonFilePath) async {
-    try {
-      // Clear existing data
-      await _db.getAll('stock').then((data) async {
-        for (String key in data.keys) {
-          await _db.delete('stock', key);
-        }
-      });
-
-      await _db.getAll('transactions').then((data) async {
-        for (String key in data.keys) {
-          await _db.delete('transactions', key);
-        }
-      });
-
-      // Read the JSON file
-      final String jsonString = await rootBundle.loadString(jsonFilePath);
-      final Map<String, dynamic> jsonData = jsonDecode(jsonString);
-
-      debugPrint("🔍 Starting JSON import from: $jsonFilePath");
-
-      // Process stocks
-      if (jsonData.containsKey('stocks')) {
-        final List<dynamic> stocksData = jsonData['stocks'];
-
-        for (var stockData in stocksData) {
-          final StockModel stock = StockModel.fromJson(stockData as Map<String, dynamic>);
-          await _stockService.save(stock);
-        }
-
-        debugPrint("✅ Imported ${stocksData.length} stocks");
-      }
-
-      // Process transactions
-      if (jsonData.containsKey('transactions')) {
-        final List<dynamic> transactionsData = jsonData['transactions'];
-
-        for (var transactionData in transactionsData) {
-          final TransactionModel transaction = TransactionModel.fromJson(transactionData as Map<String, dynamic>);
-          await _transactionService.save(transaction);
-        }
-
-        debugPrint("✅ Imported ${transactionsData.length} transactions");
-      }
-
-      debugPrint("🚀 Sample data import completed successfully");
-    } catch (e) {
-      debugPrint("🚨 Error importing sample data: $e");
-      throw Exception("Failed to import sample data: $e");
     }
   }
 }

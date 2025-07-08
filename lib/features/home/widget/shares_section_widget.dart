@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vilsa/core/components/section_container.dart';
-import 'package:vilsa/core/extensions/context_extension.dart';
-import 'package:vilsa/features/home/viewmodel/home_view_model.dart';
 import 'package:vilsa/core/enums/stock_filter_type_enum.dart';
 import 'package:vilsa/core/enums/stock_sort_type_enum.dart';
+import 'package:vilsa/core/extensions/context_extension.dart';
+import 'package:vilsa/core/init/network/debounce_service.dart';
+import 'package:vilsa/features/home/viewmodel/home_view_model.dart';
 import 'package:vilsa/features/portfolio/view/portfolio_view.dart';
 import 'package:vilsa/features/portfolio/viewmodel/portfolio_view.dart.dart';
 
@@ -28,7 +29,8 @@ class SharesSectionWidget extends StatelessWidget {
               filled: false,
               prefixIcon: Icon(Icons.search_rounded),
               prefixIconColor: context.primary,
-              prefixIconConstraints: const BoxConstraints(minWidth: 50, minHeight: 0),
+              prefixIconConstraints:
+                  const BoxConstraints(minWidth: 50, minHeight: 0),
               hintText: 'Hisse Adı Girin',
               hintStyle: TextStyle(color: context.primary),
               border: InputBorder.none,
@@ -47,11 +49,16 @@ class SharesSectionWidget extends StatelessWidget {
                 : context.onSurface.withValues(alpha: 0.5),
           ),
           onSelected: (value) {
-            if (value is StockFilterTypeEnum) {
-              viewModel.setStockFilterType(value);
-            } else if (value is StockSortTypeEnum) {
-              viewModel.setStockSortType(value);
-            }
+            DebounceService().execute(
+              'filter_menu_selection',
+              () {
+                if (value is StockFilterTypeEnum) {
+                  viewModel.setStockFilterType(value);
+                } else if (value is StockSortTypeEnum) {
+                  viewModel.setStockSortType(value);
+                }
+              },
+            );
           },
           itemBuilder: (context) => [
             PopupMenuItem(
@@ -60,7 +67,9 @@ class SharesSectionWidget extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.list_rounded,
-                    color: viewModel.stockFilterType == StockFilterTypeEnum.all ? context.primary : context.onSurface,
+                    color: viewModel.stockFilterType == StockFilterTypeEnum.all
+                        ? context.primary
+                        : context.onSurface,
                   ),
                   const SizedBox(width: 8),
                   Text('Tüm Hisseler'),
@@ -74,7 +83,9 @@ class SharesSectionWidget extends StatelessWidget {
                   Icon(
                     Icons.trending_up_rounded,
                     color:
-                        viewModel.stockFilterType == StockFilterTypeEnum.traded ? context.primary : context.onSurface,
+                        viewModel.stockFilterType == StockFilterTypeEnum.traded
+                            ? context.primary
+                            : context.onSurface,
                   ),
                   const SizedBox(width: 8),
                   Text('İşlem Yapılanlar'),
@@ -87,8 +98,10 @@ class SharesSectionWidget extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.trending_down_rounded,
-                    color:
-                        viewModel.stockFilterType == StockFilterTypeEnum.untraded ? context.primary : context.onSurface,
+                    color: viewModel.stockFilterType ==
+                            StockFilterTypeEnum.untraded
+                        ? context.primary
+                        : context.onSurface,
                   ),
                   const SizedBox(width: 8),
                   Text('İşlem Yapılmayanlar'),
@@ -102,8 +115,10 @@ class SharesSectionWidget extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.sort_by_alpha_rounded,
-                    color:
-                        viewModel.stockSortType == StockSortTypeEnum.alphabetical ? context.primary : context.onSurface,
+                    color: viewModel.stockSortType ==
+                            StockSortTypeEnum.alphabetical
+                        ? context.primary
+                        : context.onSurface,
                   ),
                   const SizedBox(width: 8),
                   Text('Alfabetik Sırala'),
@@ -116,7 +131,9 @@ class SharesSectionWidget extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.numbers_rounded,
-                    color: viewModel.stockSortType == StockSortTypeEnum.quantity ? context.primary : context.onSurface,
+                    color: viewModel.stockSortType == StockSortTypeEnum.quantity
+                        ? context.primary
+                        : context.onSurface,
                   ),
                   const SizedBox(width: 8),
                   Text('Adete Göre Sırala'),
@@ -130,7 +147,9 @@ class SharesSectionWidget extends StatelessWidget {
                   Icon(
                     Icons.attach_money_rounded,
                     color:
-                        viewModel.stockSortType == StockSortTypeEnum.totalValue ? context.primary : context.onSurface,
+                        viewModel.stockSortType == StockSortTypeEnum.totalValue
+                            ? context.primary
+                            : context.onSurface,
                   ),
                   const SizedBox(width: 8),
                   Text('Toplam Değere Göre Sırala'),
@@ -143,8 +162,10 @@ class SharesSectionWidget extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.analytics_rounded,
-                    color:
-                        viewModel.stockSortType == StockSortTypeEnum.averagePrice ? context.primary : context.onSurface,
+                    color: viewModel.stockSortType ==
+                            StockSortTypeEnum.averagePrice
+                        ? context.primary
+                        : context.onSurface,
                   ),
                   const SizedBox(width: 8),
                   Text('Ortalama Fiyata Göre Sırala'),

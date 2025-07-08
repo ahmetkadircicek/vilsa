@@ -6,11 +6,12 @@ import 'package:vilsa/core/constants/general_constants.dart';
 import 'package:vilsa/core/constants/padding_constants.dart';
 import 'package:vilsa/core/extensions/context_extension.dart';
 import 'package:vilsa/core/extensions/price_formatter.dart';
+import 'package:vilsa/core/init/network/debounce_service.dart';
 import 'package:vilsa/features/add_stock/view/add_stock_view.dart';
-import 'package:vilsa/features/home/widget/shares_section_widget.dart';
 import 'package:vilsa/features/home/viewmodel/home_view_model.dart';
 import 'package:vilsa/features/home/widget/chart_section_widget.dart';
 import 'package:vilsa/features/home/widget/date_range_picker_widget.dart';
+import 'package:vilsa/features/home/widget/shares_section_widget.dart';
 import 'package:vilsa/features/stock/viewmodel/stock_view_model.dart';
 
 class HomeView extends StatelessWidget {
@@ -39,9 +40,12 @@ class HomeView extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const AddStockView(),
+          DebounceService().execute(
+            'add_stock_fab',
+            () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const AddStockView(),
+              ),
             ),
           );
         },
@@ -51,7 +55,8 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  Widget _bodySection(BuildContext context, HomeViewModel homeViewModel, StockViewModel stockViewModel) {
+  Widget _bodySection(BuildContext context, HomeViewModel homeViewModel,
+      StockViewModel stockViewModel) {
     return Padding(
       padding: PaddingConstants.pagePadding,
       child: Column(
@@ -83,7 +88,8 @@ class HomeView extends StatelessWidget {
           bottomRight: GeneralConstants.instance.borderRadius.bottomRight,
         ),
       ),
-      padding: PaddingConstants.symmetricHorizontalMedium + PaddingConstants.onlyBottomLarge,
+      padding: PaddingConstants.symmetricHorizontalMedium +
+          PaddingConstants.onlyBottomLarge,
       child: _buildBalanceInfo(context, viewModel),
     );
   }
@@ -97,7 +103,10 @@ class HomeView extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Label(text: 'Toplam Bakiye', color: context.onPrimary),
-            Headline(text: viewModel.totalBalance.toPrice(), isBold: true, color: context.onPrimary),
+            Headline(
+                text: viewModel.totalBalance.toPrice(),
+                isBold: true,
+                color: context.onPrimary),
             Label(
               text: 'Toplam Temettü: ${viewModel.totalDividends.toPrice()}',
               color: context.onPrimary.withValues(alpha: 0.8),

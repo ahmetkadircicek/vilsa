@@ -27,8 +27,9 @@ class StockModel {
       "name": name,
       "abbreviation": abbreviation,
       "dividends": dividends,
+      "currentPrice": currentPrice,
       // We don't include transactions in the stock JSON to avoid circular references
-      // currentPrice and changePercentage are not stored as they are dynamic values
+      // changePercentage is calculated dynamically
     };
   }
 
@@ -38,9 +39,15 @@ class StockModel {
       id: json["id"] ?? '',
       name: json["name"] ?? '',
       abbreviation: json["abbreviation"] ?? "",
-      dividends: (json["dividends"] is num) ? (json["dividends"] as num).toDouble() : 0.0,
-      currentPrice: (json["currentPrice"] is num) ? (json["currentPrice"] as num).toDouble() : 0.0,
-      changePercentage: (json["changePercentage"] is num) ? (json["changePercentage"] as num).toDouble() : 0.0,
+      dividends: (json["dividends"] is num)
+          ? (json["dividends"] as num).toDouble()
+          : 0.0,
+      currentPrice: (json["currentPrice"] is num)
+          ? (json["currentPrice"] as num).toDouble()
+          : 0.0,
+      changePercentage: (json["changePercentage"] is num)
+          ? (json["changePercentage"] as num).toDouble()
+          : 0.0,
       // Transactions will be loaded separately
     );
   }
@@ -68,18 +75,21 @@ class StockModel {
 
   /// Calculate the total cost of all transactions
   double get totalCost {
-    return transactions.fold(0.0, (sum, transaction) => sum + (transaction.price * transaction.quantity));
+    return transactions.fold(0.0,
+        (sum, transaction) => sum + (transaction.price * transaction.quantity));
   }
 
   /// Calculate the average price per share
   double get averagePrice {
-    int totalQuantity = transactions.fold(0, (sum, transaction) => sum + transaction.quantity);
+    int totalQuantity =
+        transactions.fold(0, (sum, transaction) => sum + transaction.quantity);
     return totalQuantity > 0 ? totalCost / totalQuantity : 0.0;
   }
 
   /// Calculate the total quantity of shares
   int get totalQuantity {
-    return transactions.fold(0, (sum, transaction) => sum + transaction.quantity);
+    return transactions.fold(
+        0, (sum, transaction) => sum + transaction.quantity);
   }
 
   /// Get the stock symbol (same as abbreviation for consistency)

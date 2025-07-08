@@ -2,102 +2,57 @@ import 'dart:async';
 
 import 'package:intl/intl.dart';
 import 'package:vilsa/core/base/base_view_model.dart';
-import 'package:vilsa/core/init/event/event_bus.dart';
-import 'package:vilsa/core/init/event/event_type_enum.dart';
+import 'package:vilsa/core/init/network/dividend_service.dart';
 import 'package:vilsa/core/init/network/stock_service.dart';
 import 'package:vilsa/core/init/network/transaction_service.dart';
 import 'package:vilsa/features/add_transaction/model/transaction_model.dart';
+import 'package:vilsa/features/stock/model/dividend_model.dart';
 import 'package:vilsa/features/stock/model/stock_model.dart';
 
 /// ViewModel for managing stock details screen
 class StockDetailsViewModel extends BaseViewModel {
   final StockService _stockService = StockService.instance;
   final TransactionService _transactionService = TransactionService.instance;
-  final EventBus _eventBus = EventBus.instance;
-
-  // Event aboneliklerini takip etmek için
-  late StreamSubscription<AppEvent> _transactionAddedSubscription;
-  late StreamSubscription<AppEvent> _transactionUpdatedSubscription;
-  late StreamSubscription<AppEvent> _transactionDeletedSubscription;
+  final DividendService _dividendService = DividendService.instance;
 
   List<TransactionModel> _transactions = [];
-  DateTime _startDate = DateTime.now().subtract(const Duration(days: 365 * 2)); // Default to 1 year ago
+  List<DividendModel> _dividends = [];
+  DateTime _startDate = DateTime.now()
+      .subtract(const Duration(days: 365 * 2)); // Default to 2 years ago
   DateTime _endDate = DateTime.now(); // Default to today
   StockModel? _currentStock;
   String? _currentStockId;
   bool _hasLoadedTransactions = false; // Transaction yükleme durumu
+  bool _hasLoadedDividends = false; // Dividend yükleme durumu
 
-  // Cache for expensive calculations
-  List<TransactionModel>? _cachedFilteredTransactions;
-  double? _cachedTotalCostPrice;
-  double? _cachedTotalDividends;
-  double? _cachedDividendYield;
-  double? _cachedAverageCostPerShare;
-  List<Map<String, dynamic>>? _cachedChartData;
-
-  StockDetailsViewModel() {
-    _initializeEventListeners();
-  }
-
-  /// Olay dinleyicilerini başlatma
-  void _initializeEventListeners() {
-    _transactionAddedSubscription = _eventBus.on(EventType.transactionAdded).listen(_onTransactionEvent);
-    _transactionUpdatedSubscription = _eventBus.on(EventType.transactionUpdated).listen(_onTransactionEvent);
-    _transactionDeletedSubscription = _eventBus.on(EventType.transactionDeleted).listen(_onTransactionEvent);
-  }
-
-  /// İşlem olaylarını işleme
-  void _onTransactionEvent(AppEvent event) {
-    // Olay tipini ve veriyi logla
-    print("İşlem Olayı: ${event.type}, Veri: ${event.data.toString()}");
-
-    // Eğer aktif bir stok yoksa güncelleme yapmaya gerek yok
-    if (_currentStockId == null) {
-      print("Aktif bir stok bulunmadığı için işlem olayı işlenemiyor.");
-      return;
-    }
-
-    final TransactionModel transaction = event.data as TransactionModel;
-    print("İşlem StockId: ${transaction.stockId}, Mevcut StockId: $_currentStockId");
-
-    // Eğer bu işlem mevcut stoka aitse, verileri yenile
-    if (transaction.stockId == _currentStockId) {
-      print("İşlem bu stoka ait, veriler yenileniyor");
-      // Verileri yenile
-      fetchTransactions(_currentStockId!);
-    } else {
-      print("İşlem farklı bir stoka ait, veriler yenilenmiyor");
-    }
-  }
-
-  // Invalidate cache when data changes
-  void _invalidateCache() {
-    _cachedFilteredTransactions = null;
-    _cachedTotalCostPrice = null;
-    _cachedTotalDividends = null;
-    _cachedDividendYield = null;
-    _cachedAverageCostPerShare = null;
-    _cachedChartData = null;
-  }
+  StockDetailsViewModel();
 
   List<TransactionModel> get transactions => _transactions;
+  List<DividendModel> get dividends => _dividends;
   DateTime get startDate => _startDate;
   DateTime get endDate => _endDate;
   StockModel? get currentStock => _currentStock;
+  String? get currentStockId => _currentStockId;
   bool get hasLoadedTransactions => _hasLoadedTransactions;
+  bool get hasLoadedDividends => _hasLoadedDividends;
 
   /// Get transactions filtered by the selected date range
   List<TransactionModel> get filteredTransactions {
-    if (_cachedFilteredTransactions != null) return _cachedFilteredTransactions!;
-
-    _cachedFilteredTransactions = _transactions.where((transaction) {
-      return transaction.date.isAfter(_startDate) && transaction.date.isBefore(_endDate.add(const Duration(days: 1)));
+    return _transactions.where((transaction) {
+      return transaction.date.isAfter(_startDate) &&
+          transaction.date.isBefore(_endDate.add(const Duration(days: 1)));
     }).toList();
-
-    return _cachedFilteredTransactions!;
   }
 
-  /// Fetch transactions for a specific stock
+  /// Get dividends filtered by the selected date range
+  List<DividendModel> get filteredDividends {
+    return _dividends.where((dividend) {
+      return dividend.date.isAfter(_startDate) &&
+          dividend.date.isBefore(_endDate.add(const Duration(days: 1)));
+    }).toList();
+  }
+
+  /// Fetch transactions and dividends for a specific stock
   Future<void> fetchTransactions(String stockId) async {
     _currentStockId = stockId;
 
@@ -110,22 +65,25 @@ class StockDetailsViewModel extends BaseViewModel {
 
       // Filter transactions by stock ID
       _transactions = allTransactions.where((transaction) {
-        return transaction.stockId == stockId || transaction.stock?.id == stockId;
+        return transaction.stockId == stockId ||
+            transaction.stock?.id == stockId;
       }).toList();
 
       // Sort transactions by date
       _transactions.sort((a, b) => a.date.compareTo(b.date));
 
-      // Invalidate cache when transactions change
-      _invalidateCache();
+      // Fetch dividends for this stock
+      _dividends = await _dividendService.fetchByStockId(stockId);
 
-      // İşlemlerin yüklendiğini işaretle
+      // İşlemlerin ve temettülerin yüklendiğini işaretle
       _hasLoadedTransactions = true;
+      _hasLoadedDividends = true;
 
-      print("fetchTransactions: ${_transactions.length} işlem yüklendi (StockID: $stockId)");
+      print(
+          "fetchTransactions: ${_transactions.length} işlem ve ${_dividends.length} temettü yüklendi (StockID: $stockId)");
 
       return _transactions;
-    }, errorPrefix: "Failed to fetch transactions");
+    }, errorPrefix: "Failed to fetch transactions and dividends");
   }
 
   /// Update date range
@@ -133,32 +91,11 @@ class StockDetailsViewModel extends BaseViewModel {
     _startDate = start;
     _endDate = end;
 
-    // Invalidate cache when date range changes
-    _invalidateCache();
     notifyListeners();
   }
 
-  /// Calculate total cost price for the filtered range
+  /// Calculate total cost price for the filtered range (remaining cost basis)
   double calculateTotalCostPrice() {
-    if (_cachedTotalCostPrice != null) return _cachedTotalCostPrice!;
-
-    double total = 0;
-    for (var transaction in filteredTransactions) {
-      if (transaction.type == TransactionType.buy) {
-        total += transaction.price * transaction.quantity;
-      } else if (transaction.type == TransactionType.sell) {
-        // Satışları maliyetten düşmüyoruz, çünkü ortalama maliyet hesabında net alım adedine bölünecek
-      }
-    }
-
-    _cachedTotalCostPrice = total;
-    return total;
-  }
-
-  /// Calculate average cost per share
-  double calculateAverageCostPerShare() {
-    if (_cachedAverageCostPerShare != null) return _cachedAverageCostPerShare!;
-
     double totalCost = 0;
     int totalShares = 0;
 
@@ -167,18 +104,46 @@ class StockDetailsViewModel extends BaseViewModel {
         totalCost += transaction.price * transaction.quantity;
         totalShares += transaction.quantity;
       } else if (transaction.type == TransactionType.sell) {
+        // When selling, reduce the cost proportionally
+        if (totalShares > 0) {
+          double avgCostSoFar = totalCost / totalShares;
+          double soldCost = avgCostSoFar * transaction.quantity;
+          totalCost -= soldCost;
+        }
+        totalShares -= transaction.quantity;
+      }
+    }
+
+    // Return the remaining cost basis
+    return totalCost > 0 ? totalCost : 0;
+  }
+
+  /// Calculate average cost per share
+  double calculateAverageCostPerShare() {
+    double totalCost = 0;
+    int totalShares = 0;
+
+    for (var transaction in filteredTransactions) {
+      if (transaction.type == TransactionType.buy) {
+        totalCost += transaction.price * transaction.quantity;
+        totalShares += transaction.quantity;
+      } else if (transaction.type == TransactionType.sell) {
+        // When selling, reduce the shares but proportionally reduce the cost basis
+        if (totalShares > 0) {
+          double avgCostSoFar = totalCost / totalShares;
+          double soldCost = avgCostSoFar * transaction.quantity;
+          totalCost -= soldCost;
+        }
         totalShares -= transaction.quantity;
       }
     }
 
     // Eğer hiç hisse yoksa veya tüm hisseler satılmışsa ortalama maliyet gösterilmez
     if (totalShares <= 0) {
-      _cachedAverageCostPerShare = 0;
       return 0;
     }
 
-    _cachedAverageCostPerShare = totalCost / totalShares;
-    return _cachedAverageCostPerShare!;
+    return totalCost / totalShares;
   }
 
   /// Get total shares count
@@ -196,46 +161,29 @@ class StockDetailsViewModel extends BaseViewModel {
     return totalShares < 0 ? 0 : totalShares;
   }
 
-  /// Calculate total dividends for the filtered range
+  /// Calculate total dividends for the filtered range (NEW SYSTEM)
   double calculateTotalDividends() {
-    if (_cachedTotalDividends != null) return _cachedTotalDividends!;
+    // Use new dividend system only
+    double totalDividends = filteredDividends.fold(0.0, (total, dividend) {
+      return total + dividend.totalAmount;
+    });
 
-    // Get total dividends from filtered transactions
-    double transactionDividends = filteredTransactions.fold(0.0, (total, transaction) => total + transaction.dividends);
-
-    // Get dividends from the stock itself and calculate based on the date range
-    if (_currentStock != null) {
-      // Toplam hisse adedi
-      int totalQuantity = getTotalSharesCount();
-
-      // Adet başına temettü ile toplam adet çarpımı
-      double stockDividends = _currentStock!.dividends * totalQuantity;
-
-      _cachedTotalDividends = transactionDividends + stockDividends;
-      return _cachedTotalDividends!;
-    }
-
-    _cachedTotalDividends = transactionDividends;
-    return transactionDividends;
+    return totalDividends;
   }
 
   /// Calculate dividend yield for the filtered range
   double calculateDividendYield() {
-    if (_cachedDividendYield != null) return _cachedDividendYield!;
-
     double totalCostPrice = calculateTotalCostPrice();
     double totalDividends = calculateTotalDividends();
 
-    _cachedDividendYield = totalCostPrice > 0 ? (totalDividends / totalCostPrice) * 100 : 0.0;
-    return _cachedDividendYield!;
+    return totalCostPrice > 0 ? (totalDividends / totalCostPrice) * 100 : 0.0;
   }
 
   /// Get data points for chart display
   List<Map<String, dynamic>> getChartData() {
-    if (_cachedChartData != null) return _cachedChartData!;
-
     List<Map<String, dynamic>> chartData = [];
-    final sortedTransactions = filteredTransactions.toList()..sort((a, b) => a.date.compareTo(b.date));
+    final sortedTransactions = filteredTransactions.toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
 
     // Generate data points for each transaction
     for (var transaction in sortedTransactions) {
@@ -249,39 +197,73 @@ class StockDetailsViewModel extends BaseViewModel {
       });
     }
 
-    _cachedChartData = chartData;
     return chartData;
   }
 
   /// Delete a transaction by ID
   Future<void> deleteTransaction(String transactionId) async {
     await executeAsync(() async {
-      // Önce silinen işlemi al (olay yayınlamak için)
-      final transaction = _transactions.firstWhere((tx) => tx.id == transactionId);
-
       // İşlemi veritabanından sil
       await _transactionService.delete(transactionId);
 
       // Yerel listeden de kaldır
       _transactions.removeWhere((tx) => tx.id == transactionId);
 
-      // Önbelleği temizle
-      _invalidateCache();
-
-      // İşlem silindi olayını yayınla
-      _eventBus.fireEvent(EventType.transactionDeleted, data: transaction);
-
       return true;
     }, errorPrefix: "Failed to delete transaction");
   }
 
-  @override
-  void dispose() {
-    // Abonelikleri iptal et
-    _transactionAddedSubscription.cancel();
-    _transactionUpdatedSubscription.cancel();
-    _transactionDeletedSubscription.cancel();
+  /// Calculate current market value based on current price
+  double calculateCurrentMarketValue() {
+    if (_currentStock?.currentPrice == null ||
+        _currentStock!.currentPrice <= 0) {
+      return 0.0;
+    }
 
-    super.dispose();
+    int totalShares = getTotalSharesCount();
+    return _currentStock!.currentPrice * totalShares;
+  }
+
+  /// Calculate profit/loss amount
+  double calculateProfitLoss() {
+    double currentValue = calculateCurrentMarketValue();
+    double totalCost = calculateTotalCostPrice();
+
+    if (currentValue <= 0 || totalCost <= 0) {
+      return 0.0;
+    }
+
+    return currentValue - totalCost;
+  }
+
+  /// Calculate profit/loss percentage
+  double calculateProfitLossPercentage() {
+    double profitLoss = calculateProfitLoss();
+    double totalCost = calculateTotalCostPrice();
+
+    if (totalCost <= 0) {
+      return 0.0;
+    }
+
+    return (profitLoss / totalCost) * 100;
+  }
+
+  /// Check if current stock has a valid current price
+  bool get hasCurrentPrice {
+    return _currentStock?.currentPrice != null &&
+        _currentStock!.currentPrice > 0;
+  }
+
+  /// Delete a dividend by ID
+  Future<void> deleteDividend(String dividendId) async {
+    await executeAsync(() async {
+      // Delete from service
+      await _dividendService.delete(dividendId);
+
+      // Remove from local list
+      _dividends.removeWhere((d) => d.id == dividendId);
+
+      return true;
+    }, errorPrefix: "Failed to delete dividend");
   }
 }

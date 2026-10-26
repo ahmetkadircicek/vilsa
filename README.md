@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="docs/screenshots/vilsa_logo.webp" alt="Vilsa Logo" width="100" />
+<img src="docs/cover.png" alt="Vilsa" width="100%" />
 
 ### Real-time stock portfolio tracking and dividend analytics.
 
